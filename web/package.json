@@ -5,7 +5,7 @@
   "description": "One-page site: type a Lightning address, pick a picture, download the print file.",
   "scripts": {
     "build": "node build.js",
-    "test": "node test_engine.js && node test_badge.js"
+    "test": "node test_engine.js && node test_badge.js && node test_single.js"
   },
   "dependencies": {
     "earcut": "^3.2.4",

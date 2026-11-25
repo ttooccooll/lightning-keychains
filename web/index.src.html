@@ -4,12 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lightning Keychains</title>
-<meta name="description" content="Type a Lightning address, pick a picture, and download a multi-colour keychain to 3D print: a QR code on one side that pays you in bitcoin, your picture on the other.">
+<meta name="description" content="Type a Lightning address, pick a picture or a few words, and download a keychain to 3D print on any printer: a QR code on one side that pays you in bitcoin, your design on the other.">
 <meta property="og:title" content="Lightning Keychains">
-<meta property="og:description" content="Get paid in bitcoin from your key ring. Type a Lightning address, pick a picture, download the print file.">
+<meta property="og:description" content="Get paid in bitcoin from your key ring. Type a Lightning address, pick a picture or a few words, download the print file.">
 <meta name="theme-color" content="#F7931A">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='18' r='12' fill='%23F7931A' stroke='%2319191B' stroke-width='3'/%3E%3Ccircle cx='16' cy='4.5' r='3' fill='none' stroke='%2319191B' stroke-width='2.4'/%3E%3C/svg%3E">
-<meta name="description" content="Put your Lightning address on a keychain. Type an address, pick a picture, download the print file.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
 <style>
@@ -24,6 +23,7 @@
     --ui: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   }
   *, *::before, *::after { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; }
   body {
     background: var(--stage); color: var(--fg); font: 500 16px/1.45 var(--ui);
@@ -68,12 +68,14 @@
   .state { min-height: 1.45em; margin: 8px 2px 0; font-size: 14px; }
   .state.bad { font-weight: 700; }
 
-  .tiles { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 7px; }
+  .tiles { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; }
   .tile, .upload {
     aspect-ratio: 1; border-radius: 14px; border: 2px solid transparent; background: var(--paper); color: var(--paper-fg);
     display: grid; place-items: center; cursor: pointer; padding: 0; position: relative; transition: transform .12s ease;
   }
   .tile svg { width: 62%; height: 62%; display: block; }
+  .tile.badge svg { width: 84%; height: 84%; }
+  .tile.badge[aria-pressed="true"] { background: var(--paper); }
   .tile:hover, .upload:hover { transform: translateY(-2px); }
   .tile[aria-pressed="true"] { background: var(--fg); color: var(--stage); border-color: var(--fg); }
   .upload { border: 2px dashed var(--fg); background: transparent; color: var(--fg); font: 700 11px/1.1 var(--ui); text-align: center; }
@@ -108,13 +110,46 @@
     .head { position: static; max-width: none; padding: 22px 20px 0; }
     .viewwrap { position: relative; inset: auto; height: min(96vw, 58vh); overflow: hidden; }
     .panel { padding-top: 8px; min-height: 0; }
-    .tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .tiles { grid-template-columns: repeat(6, minmax(0, 1fr)); }
     .hint { display: none; }
     .sides { right: 50%; transform: translateX(50%); bottom: 10px; }
   }
   @media (prefers-reduced-motion: reduce) { body, .echo, .go, .tile, .upload { transition: none; } }
   .swatch:disabled { opacity: .32; cursor: not-allowed; }
-  .ekasi[aria-pressed="true"] { text-decoration-thickness: 3px; }
+
+  .words { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .word { font: 700 13px/1 var(--ui); padding: 8px 12px; border-radius: 999px; border: 2px solid var(--fg); background: transparent; color: var(--fg); cursor: pointer; }
+  .word[aria-pressed="true"] { background: var(--fg); color: var(--stage); }
+  .wordsin {
+    width: 100%; margin-top: 8px; font: 700 15px/1.2 var(--ui); padding: 10px 14px; border-radius: 12px; border: 2px solid var(--fg);
+    background: var(--paper); color: var(--paper-fg); outline: none;
+  }
+  .wordsin::placeholder { color: rgba(0,0,0,.42); font-weight: 500; }
+  .wordsin:focus-visible, .word:focus-visible, .seg:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+  .segs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .seg { text-align: left; padding: 10px 14px; border-radius: 14px; border: 2px solid var(--fg); background: transparent; color: var(--fg); cursor: pointer; font: 700 15px/1.2 var(--ui); }
+  .seg span { display: block; font-weight: 500; font-size: 12.5px; margin-top: 3px; }
+  .seg[aria-pressed="true"] { background: var(--fg); color: var(--stage); }
+  .alt { margin: 8px 2px 0; font-size: 14px; }
+
+  dialog.tip {
+    width: min(420px, calc(100vw - 32px)); border: 3px solid #000; border-radius: 22px; padding: 26px 24px 22px; background: #FFF7EA; color: #000;
+    font: 500 16px/1.45 var(--ui);
+  }
+  dialog.tip::backdrop { background: rgba(0,0,0,.55); }
+  .tip h2 { font: 400 34px/1 var(--display); letter-spacing: .01em; margin: 0 0 10px; }
+  .tip p { margin: 0 0 14px; }
+  .tip .x { position: absolute; right: 14px; top: 10px; font: 400 30px/1 var(--ui); background: none; border: 0; cursor: pointer; color: #000; padding: 4px 8px; }
+  .tip .amounts { display: flex; gap: 8px; margin-bottom: 12px; }
+  .tip .amounts button { flex: 1; font: 700 15px/1 var(--ui); padding: 12px 6px; border-radius: 12px; border: 2px solid #000; background: transparent; color: #000; cursor: pointer; }
+  .tip .amounts button[aria-pressed="true"] { background: #000; color: #F7931A; }
+  .tip .make { width: 100%; font: 400 22px/1 var(--display); letter-spacing: .03em; padding: 14px; border-radius: 14px; border: 3px solid #000; background: #000; color: #F7931A; cursor: pointer; }
+  .tip .make[disabled] { opacity: .5; cursor: default; }
+  .tip .qr { width: 220px; max-width: 70%; margin: 4px auto 12px; border: 3px solid #000; border-radius: 12px; overflow: hidden; background: #fff; }
+  .tip .qr svg { display: block; width: 100%; height: auto; }
+  .tip .row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .tip .row a, .tip .row button { flex: 1; text-align: center; font: 700 14px/1 var(--ui); padding: 11px 8px; border-radius: 12px; border: 2px solid #000; background: transparent; color: #000; cursor: pointer; text-decoration: none; }
+  .tip .tipstate { margin: 0; font-size: 14px; font-weight: 700; min-height: 1.45em; overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -122,7 +157,7 @@
   <section class="stage">
     <header class="head">
       <h1>Get paid in bitcoin from your key ring.</h1>
-      <p class="lede">Type your Lightning address and pick a picture. One side is the code people scan. The other is yours.</p>
+      <p class="lede">Type your Lightning address and pick a picture or a few words. One side is the code people scan. The other is yours.</p>
     </header>
     <div class="viewwrap">
       <div class="echo" id="echo" aria-hidden="true"><span></span><span></span></div>
@@ -131,7 +166,7 @@
       <p class="hint">Drag it around. Tap it to flip.</p>
       <div class="sides" role="group" aria-label="Which side to show">
         <button type="button" id="showCode" aria-pressed="false">Code</button>
-        <button type="button" id="showPic" aria-pressed="true">Picture</button>
+        <button type="button" id="showPic" aria-pressed="true">Back</button>
       </div>
     </div>
   </section>
@@ -146,8 +181,10 @@
     </div>
 
     <div class="group">
-      <span class="label" id="picLabel">Picture</span>
+      <span class="label" id="picLabel">On the back</span>
       <div class="tiles" id="tiles" role="group" aria-labelledby="picLabel"></div>
+      <div class="words" id="wordsRow" role="group" aria-label="Words for the back"></div>
+      <input class="wordsin" id="words" type="text" maxlength="40" autocomplete="off" spellcheck="true" placeholder="or type your own words" aria-label="Your own words for the back">
       <p class="picked" id="picked" aria-live="polite"></p>
     </div>
 
@@ -156,15 +193,34 @@
       <div class="swatches" id="swatches" role="group" aria-labelledby="colLabel"></div>
     </div>
 
+    <div class="group">
+      <span class="label" id="printLabel">Your printer</span>
+      <div class="segs" id="methods" role="group" aria-labelledby="printLabel"></div>
+    </div>
+
     <div>
       <button class="go" id="go" type="button">Download print file</button>
+      <p class="alt" id="altRow"><button class="ekasi" id="stl" type="button">Get STL files instead</button>, one per colour, for other slicers.</p>
       <p class="after" id="after" aria-live="polite"></p>
       <p class="facts" id="facts"></p>
     </div>
 
-    <p class="small">Made with Bitcoin Ekasi in mind, where these tags started. <button class="ekasi" id="ekasi" type="button">Load the Bitcoin Ekasi tag</button></p>
+    <p class="small">Made with Bitcoin Ekasi in mind, where these tags started. <button class="ekasi" id="ekasi" type="button">Load the Bitcoin Ekasi tag</button>. This site is free: <button class="ekasi" id="support" type="button">support it with sats</button>.</p>
   </section>
 </div>
+
+<dialog class="tip" id="tip" aria-labelledby="tipTitle">
+  <button class="x" id="tipClose" type="button" aria-label="Close">&times;</button>
+  <h2 id="tipTitle">Support this site</h2>
+  <p>Lightning Keychains is free to use. Sats sent here go to <b id="tipTo"></b>, with a note that they are for this site.</p>
+  <div class="amounts" id="tipAmounts" role="group" aria-label="Amount in sats"></div>
+  <button class="make" id="tipGo" type="button">Get an invoice</button>
+  <div id="tipPay" hidden>
+    <div class="qr" id="tipQr"></div>
+    <div class="row"><a id="tipOpen" href="#">Open in a wallet</a><button id="tipCopy" type="button">Copy invoice</button></div>
+  </div>
+  <p class="tipstate" id="tipState" aria-live="polite"></p>
+</dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>/*__QRCODE__*/</script>
@@ -188,19 +244,24 @@
   ];
 
   var $ = function (id) { return document.getElementById(id); };
-  var state = { address: OWNER_ADDRESS, image: IMAGES[0], way: WAYS[0], custom: null, typed: false };
+  var state = { address: OWNER_ADDRESS, image: IMAGES[0], way: WAYS[0], custom: null, words: null, typed: false, method: 'multi' };
   var tag = null;
 
-  // ---------- picture tiles ----------
+  // ---------- the back: pictures ----------
   function ringsPath(rings) {
     return rings.map(function (r) { return 'M' + r.map(function (p) { return (p[0] * 100).toFixed(1) + ' ' + (-p[1] * 100).toFixed(1); }).join('L') + 'Z'; }).join('');
   }
   function tileSvg(rings) { return '<svg viewBox="-56 -56 112 112" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="' + ringsPath(rings) + '"/></svg>'; }
+  function badgeSvg(b) {
+    return '<svg viewBox="-52 -52 104 104" aria-hidden="true"><circle r="50" fill="#19191B"/><path fill="#FFFFFF" fill-rule="evenodd" d="' + ringsPath(b.light) +
+      '"/><path fill="#F7931A" fill-rule="evenodd" d="' + ringsPath(b.accent) + '"/></svg>';
+  }
+  var PICTURES = IMAGES.slice(); if (EKASI) PICTURES.splice(1, 0, EKASI);
   var tiles = $('tiles');
-  IMAGES.forEach(function (im) {
+  PICTURES.forEach(function (im) {
     var b = document.createElement('button');
-    b.type = 'button'; b.className = 'tile'; b.title = im.label; b.setAttribute('aria-label', im.label); b.setAttribute('aria-pressed', 'false');
-    b.innerHTML = tileSvg(im.rings);
+    b.type = 'button'; b.className = 'tile' + (im.badge ? ' badge' : ''); b.title = im.label; b.setAttribute('aria-label', im.label); b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = im.badge ? badgeSvg(im) : tileSvg(im.rings);
     b.addEventListener('click', function () { state.image = im; refresh('picture'); });
     im.el = b; tiles.appendChild(b);
   });
@@ -223,14 +284,105 @@
     img.src = url; e.target.value = '';
   });
 
+  // ---------- the back: words ----------
+  // Words are set in the display face, broken into the lines that let the letters be largest
+  // inside the round back, drawn on a canvas and traced into the same kind of shape as a picture.
+  var WORDS = ['Make war unaffordable', 'Fix the money, fix the world', 'Stay humble, stack sats', 'Bitcoin accepted here'].map(function (t) { return { text: t }; });
+  var wordsCache = {}, wordsInput = $('words'), wordsTimer = null;
+  function wordsImage(text) {
+    text = String(text || '').replace(/\s+/g, ' ').trim().toUpperCase().slice(0, 40);
+    if (!text) return null;
+    if (wordsCache[text]) return wordsCache[text];
+    var W = 1200, FS = 200, c = document.createElement('canvas'); c.width = c.height = W;
+    var g = c.getContext('2d'), face = '400 ' + FS + 'px Anton, "Arial Narrow", Impact, sans-serif';
+    g.font = face; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+    var words = text.split(' '), n = words.length, cap = g.measureText('H').actualBoundingBoxAscent || FS * 0.73, pitch = cap * 1.22, best = null;
+    var combos = n <= 9 ? (1 << (n - 1)) : 1;
+    for (var mask = 0; mask < combos; mask++) {
+      var lines = [words[0]];
+      for (var i = 1; i < n; i++) { if (n <= 9 ? (mask >> (i - 1)) & 1 : lines[lines.length - 1].length > 9) lines.push(words[i]); else lines[lines.length - 1] += ' ' + words[i]; }
+      if (lines.length > 5) continue;
+      var H = (lines.length - 1) * pitch + cap, far = 0;
+      for (i = 0; i < lines.length; i++) {
+        var top = H / 2 - i * pitch, half = g.measureText(lines[i]).width / 2;
+        far = Math.max(far, Math.hypot(half, Math.max(Math.abs(top), Math.abs(top - cap))));
+      }
+      if (!best || cap / far > best.score) best = { score: cap / far, lines: lines, H: H, far: far };
+    }
+    var sc = W * 0.47 / best.far;
+    g.font = '400 ' + (FS * sc) + 'px Anton, "Arial Narrow", Impact, sans-serif'; g.fillStyle = '#000';
+    best.lines.forEach(function (line, i) { g.fillText(line, W / 2, W / 2 - best.H * sc / 2 + (i * pitch + cap) * sc); });
+    var traced = null; try { traced = LNKEY.traceImage(g.getImageData(0, 0, W, W).data, W, W, { cx: W / 2, cy: W / 2, s: 1 / W }); } catch (e) { traced = null; }
+    if (!traced) return null;
+    return (wordsCache[text] = { id: 'words', label: text, text: text, rings: traced.rings });
+  }
+  function useWords(text, typed) {
+    var im = wordsImage(text); if (!im) return;
+    state.words = im; state.image = im; if (!typed) wordsInput.value = '';
+    refresh('picture');
+  }
+  WORDS.forEach(function (w) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'word'; b.textContent = w.text; b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', function () { useWords(w.text); });
+    w.el = b; $('wordsRow').appendChild(b);
+  });
+  wordsInput.addEventListener('input', function () {
+    clearTimeout(wordsTimer);
+    wordsTimer = setTimeout(function () { if (wordsInput.value.trim()) useWords(wordsInput.value, true); }, 180);
+  });
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load('400 100px Anton').then(function () {          // redraw words once the display face has arrived
+      wordsCache = {};
+      if (state.image && state.image.id === 'words') { state.words = state.image = wordsImage(state.image.text) || state.image; refresh(); }
+    }, function () {});
+  }
+
+  // On a one-filament printer the back design is pressed into the plastic. Wide shapes are pressed
+  // in as a 3 mm outline so nothing has to bridge further than that; slim ones go in whole.
+  var dentCache = {};
+  function dentFor(image, k) {
+    if (!image || image.badge || image.id === 'words' || !image.rings || !image.rings.length || !k) return null;
+    var key = image.id + '|' + image.label + '|' + image.rings.length + '|' + k.toFixed(3);
+    if (key in dentCache) return dentCache[key];
+    var out = null;
+    try {
+      var rings = image.rings, far = 0;
+      image.rings.forEach(function (r) { r.forEach(function (p) { far = Math.max(far, Math.hypot(p[0], p[1])); }); });
+      var W = 1000, ppu = W / (2.1 * far), c = document.createElement('canvas'); c.width = c.height = W;
+      var g = c.getContext('2d'), path = new Path2D();
+      rings.forEach(function (r) { r.forEach(function (p, i) { var x = W / 2 + p[0] * ppu, y = W / 2 - p[1] * ppu; if (i) path.lineTo(x, y); else path.moveTo(x, y); }); path.closePath(); });
+      g.save(); g.clip(path, 'evenodd'); g.lineWidth = 2 * (3.0 / k) * ppu; g.lineJoin = 'round'; g.strokeStyle = '#000'; g.stroke(path); g.restore();
+      var t = LNKEY.traceImage(g.getImageData(0, 0, W, W).data, W, W, { cx: W / 2, cy: W / 2, s: 1 / ppu });
+      out = t ? t.rings : null;
+    } catch (e) { out = null; }
+    return (dentCache[key] = out);
+  }
+
   // ---------- colour swatches ----------
   WAYS.forEach(function (w) {
     var b = document.createElement('button');
     b.type = 'button'; b.className = 'swatch'; b.setAttribute('aria-pressed', 'false');
     var c = w.colors;
     b.innerHTML = '<i style="background:conic-gradient(' + HEX[c.body] + ' 0 50%,' + HEX[c.ink] + ' 50% 75%,' + HEX[c.accent] + ' 75% 100%)"></i>' + w.name;
-    b.addEventListener('click', function () { state.way = w; refresh('picture'); });
+    b.addEventListener('click', function () { state.way = w; refresh(state.method === 'single' ? 'code' : 'picture'); });
     w.el = b; $('swatches').appendChild(b);
+  });
+  // Bitcoin Ekasi's logo keeps its own colours: only the colourways that print it in black,
+  // white and orange stay open while it is on a multi-colour tag.
+  function logoWay(w) { return w.colors.ink === 'black' && w.colors.field === 'white' && w.colors.accent === 'orange'; }
+
+  // ---------- printer ----------
+  var METHODS = [
+    { id: 'multi', name: 'Several colours', note: 'AMS, MMU, tool changer' },
+    { id: 'single', name: 'One filament', note: 'any printer, one swap' }
+  ];
+  METHODS.forEach(function (m) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'seg'; b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = m.name + '<span>' + m.note + '</span>';
+    b.addEventListener('click', function () { state.method = m.id; refresh(m.id === 'single' ? 'code' : 'picture'); });
+    m.el = b; $('methods').appendChild(b);
   });
 
   // ---------- address ----------
@@ -241,13 +393,9 @@
   });
   $('ekasi').addEventListener('click', function () {
     addr.value = EKASI_ADDRESS; state.typed = true; state.address = EKASI_ADDRESS;
-    if (EKASI) { if (state.image !== EKASI) state.before = state.image; state.image = EKASI; state.way = WAYS[0]; }
-    else { state.image = IMAGES.filter(function (i) { return i.id === 'surfing'; })[0] || state.image; state.way = WAYS[1]; }
+    if (EKASI) state.image = EKASI;
     refresh('picture');
   });
-  // Their logo belongs with their address and their colours: it leaves when the address changes,
-  // and only the colourways that keep it black, white and orange stay open.
-  function logoWay(w) { return w.colors.ink === 'black' && w.colors.field === 'white' && w.colors.accent === 'orange'; }
 
   function setTheme(w) {
     var s = document.documentElement.style;
@@ -259,49 +407,129 @@
     var longest = Math.max(spans[0].textContent.length, spans[1].textContent.length + 2, 6);
     $('echo').style.fontSize = 'min(' + (118 / longest).toFixed(2) + 'vw, 46vh)';
   }
+  function listOf(names) { return names.join(names.length > 2 ? ', ' : ' and ').replace(/, ([^,]*)$/, ' and $1'); }
 
   function refresh(show) {
     var ok = LNKEY.validAddress(state.address), shown = ok ? state.address.toLowerCase() : OWNER_ADDRESS;
-    if (EKASI && state.image === EKASI && shown !== EKASI_ADDRESS) { state.image = state.before || IMAGES[0]; show = 'picture'; }
-    var logo = !!EKASI && state.image === EKASI;
-    if (logo && !logoWay(state.way)) state.way = WAYS[0];
-    WAYS.forEach(function (w) { w.el.disabled = logo && !logoWay(w); });
-    $('ekasi').setAttribute('aria-pressed', String(logo));
-    IMAGES.forEach(function (im) { im.el.setAttribute('aria-pressed', String(state.image === im)); });
+    var multi = state.method === 'multi', badge = !!state.image.badge, words = state.image.id === 'words';
+    if (badge && multi && !logoWay(state.way)) state.way = WAYS[0];
+    WAYS.forEach(function (w) { w.el.disabled = badge && multi && !logoWay(w); w.el.setAttribute('aria-pressed', String(state.way === w)); });
+    PICTURES.forEach(function (im) { im.el.setAttribute('aria-pressed', String(state.image === im)); });
     up.setAttribute('aria-pressed', String(state.image === state.custom && !!state.custom));
-    WAYS.forEach(function (w) { w.el.setAttribute('aria-pressed', String(state.way === w)); });
+    WORDS.forEach(function (w) { w.el.setAttribute('aria-pressed', String(words && state.image.text === w.text.toUpperCase())); });
+    METHODS.forEach(function (m) { m.el.setAttribute('aria-pressed', String(state.method === m.id)); });
+    if (!words && document.activeElement !== wordsInput) wordsInput.value = '';
     setTheme(state.way); setEcho(shown);
-    try { tag = LNKEY.build({ address: shown, image: state.image, colors: state.way.colors }); }
-    catch (e) { tag = null; }
+    try {
+      var opts = { address: shown, image: state.image, colors: state.way.colors, method: state.method };
+      if (!multi) opts.recess = dentFor(state.image, LNKEY.dims(shown, state.image).k);
+      tag = LNKEY.build(opts);
+    } catch (e) { tag = null; }
     var st = $('state');
     if (!state.typed) { st.className = 'state'; st.textContent = 'Showing the maker’s address until you type yours.'; }
     else if (!state.address) { st.className = 'state'; st.textContent = 'It looks like an email address: name@wallet.com'; }
     else if (!ok) { st.className = 'state bad'; st.textContent = 'Not a Lightning address yet. It needs a name, an @ and a domain.'; }
     else if (!tag) { st.className = 'state bad'; st.textContent = 'That address is too long to fit on a tag.'; }
     else { st.className = 'state'; st.textContent = 'Scans as lightning:' + shown; }
-    $('picked').textContent = logo ? 'Bitcoin Ekasi’s logo. It stays with their address.' :
-      state.image === state.custom && state.custom ? 'Your logo, traced in one colour. Bold shapes print best.' : state.image.label;
+    $('picked').textContent = state.image === state.custom && state.custom ? 'Your logo, traced in one colour. Bold shapes print best.' :
+      words ? '“' + state.image.label + '”' : state.image.label;
     $('go').disabled = !(tag && (ok || !state.typed));
+    $('altRow').hidden = !multi;
     if (tag) {
-      var names = tag.parts.map(function (p) { return p.colour; });
-      $('facts').innerHTML = '<b>' + tag.width.toFixed(0) + ' by ' + tag.height.toFixed(0) + ' mm</b>, 3 mm thick, ' + tag.grams.toFixed(1) + ' g of plastic in ' +
-        names.join(names.length > 2 ? ', ' : ' and ').replace(/, ([^,]*)$/, ' and $1') + '. Prints code-side down on a Bambu A1 with the AMS.';
+      var size = '<b>' + tag.width.toFixed(0) + ' by ' + tag.height.toFixed(0) + ' mm</b>, ' + tag.thickness.toFixed(1).replace('.0', '') + ' mm thick, ' + tag.grams.toFixed(1) + ' g of plastic';
+      $('facts').innerHTML = multi ?
+        size + ' in ' + listOf(tag.parts.map(function (p) { return p.colour; })) + '. For printers that change colour themselves. It prints code-side down, and the file is written for Bambu Studio and OrcaSlicer.' :
+        size + '. For any printer. It prints code-side up: start in ' + tag.swap.from + ' and swap to ' + tag.swap.to + ' at ' + tag.swap.z + ' mm, which is layer ' + tag.swap.layer +
+          ' at 0.2 mm layers. The back is pressed into the plastic.';
       if (view) view.setTag(tag, show);
     }
     $('after').textContent = '';
   }
 
   // ---------- download ----------
+  function save(name, bytes, type, done) {
+    try {
+      var url = URL.createObjectURL(new Blob([bytes], { type: type })), a = document.createElement('a');
+      a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      done(true);
+    } catch (e) { done(false); }
+  }
+  function baseName() { return tag.payload.replace('lightning:', '').replace(/[^a-z0-9]+/g, '-') + '-keychain'; }
+  function said(text) { return function (ok) { $('after').textContent = ok ? text : 'This view cannot save files. Open the page in its own browser tab.'; }; }
   $('go').addEventListener('click', function () {
     if (!tag) return;
-    var bytes = LNKEY.to3mf(tag, tag.payload.replace('lightning:', '')), base = tag.payload.replace('lightning:', '').replace(/[^a-z0-9]+/g, '-') + '-keychain';
-    var after = $('after');
-    try {
-      var url = URL.createObjectURL(new Blob([bytes], { type: 'model/3mf' })), a = document.createElement('a');
-      a.href = url; a.download = base + '.3mf'; document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
-      after.textContent = 'Downloaded. Open it in Bambu Studio and load the filaments in the order shown.';
-    } catch (e) { after.textContent = 'This view cannot save files. Open the page in its own browser tab.'; }
+    if (tag.method === 'single') {
+      save(baseName() + '.stl', LNKEY.toSTL(tag.parts), 'model/stl',
+        said('Downloaded. Slice it at 0.2 mm layers and add a filament change at ' + tag.swap.z + ' mm (layer ' + tag.swap.layer + ').'));
+    } else {
+      save(baseName() + '.3mf', LNKEY.to3mf(tag, tag.payload.replace('lightning:', '')), 'model/3mf',
+        said('Downloaded. Open it in Bambu Studio or OrcaSlicer and load the filaments in the order shown.'));
+    }
+  });
+  $('stl').addEventListener('click', function () {
+    if (!tag) return;
+    var base = baseName(), files = tag.parts.map(function (p) { return [base + '_' + p.slot + '-' + p.colour + '.stl', LNKEY.toSTL([p])]; });
+    save(base + '-stl.zip', LNKEY.zip(files), 'application/zip', said('Downloaded. Import the STL files together as one object, then give each part its colour.'));
+  });
+
+  // ---------- support ----------
+  // Asks the Lightning address for an invoice with a note attached, so the payment arrives labelled.
+  var TIP_ADDRESS = 'jasonbohio@getalby.com', TIP_NOTE = 'Donation for the Lightning Keychains site';
+  var tip = $('tip'), tipSats = 5000, tipPoll = null;
+  function qrSvg(text, mode) {
+    var q = qrcode(0, 'M'); q.addData(text, mode); q.make();
+    var n = q.getModuleCount(), d = '';
+    for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.isDark(r, c)) d += 'M' + (c + 3) + ' ' + (r + 3) + 'h1v1h-1z';
+    return '<svg viewBox="0 0 ' + (n + 6) + ' ' + (n + 6) + '" role="img" aria-label="Payment code"><rect width="100%" height="100%" fill="#fff"/><path d="' + d + '"/></svg>';
+  }
+  function tipReset() {
+    clearInterval(tipPoll); tipPoll = null;
+    $('tipPay').hidden = true; $('tipGo').hidden = false; $('tipGo').disabled = false; $('tipAmounts').hidden = false; $('tipState').textContent = '';
+  }
+  function tipShowCode(uri, qrText, mode, copyText, message) {
+    $('tipQr').innerHTML = qrSvg(qrText, mode); $('tipOpen').href = uri; $('tipCopy').dataset.copy = copyText;
+    $('tipPay').hidden = false; $('tipGo').hidden = true; $('tipAmounts').hidden = true; $('tipState').textContent = message;
+  }
+  $('tipTo').textContent = TIP_ADDRESS;
+  [1000, 5000, 21000].forEach(function (n) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.textContent = n.toLocaleString('en-US') + ' sats'; b.setAttribute('aria-pressed', String(n === tipSats));
+    b.addEventListener('click', function () { tipSats = n; Array.prototype.forEach.call($('tipAmounts').children, function (x) { x.setAttribute('aria-pressed', String(x === b)); }); });
+    $('tipAmounts').appendChild(b);
+  });
+  $('support').addEventListener('click', function () { tipReset(); if (tip.showModal) tip.showModal(); else tip.setAttribute('open', ''); });
+  $('tipClose').addEventListener('click', function () { tipReset(); if (tip.close) tip.close(); else tip.removeAttribute('open'); });
+  tip.addEventListener('close', tipReset);
+  $('tipCopy').addEventListener('click', function () {
+    var b = $('tipCopy');
+    try { navigator.clipboard.writeText(b.dataset.copy).then(function () { b.textContent = 'Copied'; }, function () { $('tipState').textContent = b.dataset.copy; }); }
+    catch (e) { $('tipState').textContent = b.dataset.copy; }
+  });
+  $('tipGo').addEventListener('click', function () {
+    var who = TIP_ADDRESS.split('@'), line = $('tipState');
+    $('tipGo').disabled = true; line.textContent = 'Asking for an invoice…';
+    fetch('https://' + who[1] + '/.well-known/lnurlp/' + who[0]).then(function (r) { return r.json(); }).then(function (info) {
+      var msat = tipSats * 1000;
+      if (!info.callback || msat < info.minSendable || msat > info.maxSendable) throw new Error('amount');
+      var note = TIP_NOTE.slice(0, info.commentAllowed || 0);
+      return fetch(info.callback + (info.callback.indexOf('?') < 0 ? '?' : '&') + 'amount=' + msat + (note ? '&comment=' + encodeURIComponent(note) : '')).then(function (r) { return r.json(); });
+    }).then(function (inv) {
+      if (!inv.pr) throw new Error('invoice');
+      tipShowCode('lightning:' + inv.pr, 'LIGHTNING:' + inv.pr.toUpperCase(), 'Alphanumeric', inv.pr, 'Waiting for ' + tipSats.toLocaleString('en-US') + ' sats…');
+      if (inv.verify) {
+        var tries = 0;
+        tipPoll = setInterval(function () {
+          if (++tries > 120) { clearInterval(tipPoll); return; }
+          fetch(inv.verify).then(function (r) { return r.json(); }).then(function (v) {
+            if (v && v.settled) { clearInterval(tipPoll); $('tipPay').hidden = true; line.textContent = 'Received. Thank you!'; }
+          }, function () {});
+        }, 3000);
+      }
+    }).catch(function () {
+      tipShowCode('lightning:' + TIP_ADDRESS, 'lightning:' + TIP_ADDRESS, 'Byte', TIP_ADDRESS,
+        'Could not make an invoice from here. Pay ' + TIP_ADDRESS + ' and add the note “' + TIP_NOTE + '”.');
+    });
   });
 
   // ---------- the 3D view ----------
@@ -343,6 +571,8 @@
     var ringOff = SKEW;
     tip.position.set(0, -2 * RING_R, 0);
     var mats = {};
+    var shades = {};
+    function shadeMat(c) { if (!shades[c]) shades[c] = new T.MeshStandardMaterial({ color: new T.Color(HEX[c]).convertSRGBToLinear().multiplyScalar(0.5), roughness: 0.9, metalness: 0, envMapIntensity: 0.1 }); return shades[c]; }
     function mat(c) { if (!mats[c]) mats[c] = new T.MeshStandardMaterial({ color: new T.Color(HEX[c]).convertSRGBToLinear(), roughness: 0.6, metalness: 0, envMapIntensity: 0.3 }); return mats[c]; }
 
     var yaw = 0.5, pitch = -0.08, vy = 0, target = null, dragging = false, moved = 0, lx = 0, ly = 0, t0 = performance.now(), still = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -351,8 +581,14 @@
       var cyc = (tg.height - 2 * tg.R) / 2;                       // centre the tag between its bottom edge and the top of the loop
       tg.parts.forEach(function (p) {
         var g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(LNKEY.soup(p), 3)); g.computeVertexNormals();
-        var mesh = new T.Mesh(g, mat(p.colour)); mesh.position.set(0, -(tg.loopY + SEAT), -tg.thickness / 2); mesh.castShadow = true; body.add(mesh);
+        var mesh = new T.Mesh(g, mat(p.colour)); mesh.position.set(0, -(tg.loopY + SEAT), -tg.thickness / 2); mesh.castShadow = true;
+        if (tg.codeUp) { mesh.rotation.y = Math.PI; mesh.position.z = tg.thickness / 2; }   // the code is on its top face: turn it to the code side
+        body.add(mesh);
       });
+      if (tg.shade && tg.shade.prisms.length) {                     // the pressed-in design, drawn in shadow so it reads on screen
+        var sg = new T.BufferGeometry(); sg.setAttribute('position', new T.BufferAttribute(LNKEY.soup(tg.shade), 3)); sg.computeVertexNormals();
+        var sm = new T.Mesh(sg, shadeMat(tg.shade.colour)); sm.position.set(0, -(tg.loopY + SEAT), tg.thickness / 2); sm.rotation.y = Math.PI; body.add(sm);
+      }
       hook.position.set(0, tg.loopY + SEAT - cyc + 2 * RING_R, 0);  // keeps the tag itself centred in the view
       rig.userData.h = tg.height + 24;
       if (show) face(show);

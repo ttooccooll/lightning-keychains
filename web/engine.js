@@ -18,6 +18,8 @@
     bevel: [0.45, 0.25, 0.10]
   };
   var DENSITY = 1.24;   // PLA, g/cm3
+  // the one-filament tag: code raised on top in a second colour, so the colour changes by height only
+  var RELIEF = { base: 2.2, code: 0.4, rim: 0.6, recess: 0.6 };
   var LIGHT = { white: 1, cream: 1, yellow: 1 };
 
   function validAddress(a) { return /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test((a || '').trim()); }
@@ -218,6 +220,8 @@
       img = opts.image.rings.map(function (r) { return r.map(function (p) { return [p[0] * k, p[1] * k]; }); });
     }
 
+    if (opts.method === 'single') return buildRelief(opts, { text: text, qr: qr, n: n, m: m, R: R, fieldR: fieldR, o0: o0, img: img, badge: badge });
+
     var lightOverDark = col.field !== col.body && LIGHT[col.field];
     var fl = lightOverDark ? 5 : P.faceLayers, nl = Math.round(P.T / P.layer);
     var parts = {}, order = [];
@@ -260,9 +264,90 @@
     [col.body, col.field, col.ink, col.accent].forEach(function (c) { if (parts[c] && parts[c].prisms.length && slots.indexOf(c) < 0) slots.push(c); });
     var list = slots.map(function (c, i) { var p = parts[c]; p.slot = i + 1; p.grams = p.volume / 1000 * DENSITY; return p; });
     return {
-      parts: list, payload: text, qr: qr, R: R, fieldR: fieldR, width: 2 * R, height: o0.top + R, thickness: P.T,
+      method: 'multi', codeUp: false, parts: list, payload: text, qr: qr, R: R, fieldR: fieldR, width: 2 * R, height: o0.top + R, thickness: P.T,
       loopY: o0.cy, grams: list.reduce(function (s, p) { return s + p.grams; }, 0), outline: o0, dark: dark, image: img
     };
+  }
+
+  // size of the tag for an address, and how a picture is scaled onto it (mm per unit)
+  function dims(address, image) {
+    var qr = makeQR(payload(address)), half = qr.n * P.module / 2, fieldR = half * Math.SQRT2 + P.margin * P.module, R = fieldR + P.rim, k = 0;
+    if (image && image.badge) k = 2 * R;
+    else if (image && image.rings && image.rings.length) {
+      var far = 0; image.rings.forEach(function (r) { r.forEach(function (p) { var d = Math.hypot(p[0], p[1]); if (d > far) far = d; }); });
+      k = (fieldR - 1.4) * 0.97 / far;
+    }
+    return { R: R, fieldR: fieldR, k: k };
+  }
+
+  // A picture pressed into plastic of one colour reads best when the smaller part is the dent.
+  // A coin with a letter knocked out becomes the letter: drop the ring that wraps everything else.
+  function engravePolarity(rings) {
+    if (!rings || rings.length < 2) return rings || [];
+    var items = rings.map(function (r) { return { r: r, a: Math.abs(ringArea(r)), b: bbox(r) }; }).sort(function (x, y) { return y.a - x.a; });
+    var big = items[0], wraps = items.slice(1).every(function (it) { return it.b[0] >= big.b[0] && it.b[1] >= big.b[1] && it.b[2] <= big.b[2] && it.b[3] <= big.b[3]; });
+    if (!wraps) return rings;
+    var inside = 0; ringsToPolys(rings).forEach(function (p) { inside += polyArea(p); });
+    return inside > 0.55 * big.a ? items.slice(1).map(function (it) { return it.r; }) : rings;
+  }
+
+  // ---- the one-filament tag ----
+  // Printed code-side up. Everything up to RELIEF.base is the first colour; the rim and the code
+  // stand above it in the second colour, so one filament swap at that height does the job.
+  // The back design is pressed RELIEF.recess deep into the face that sits on the plate.
+  function buildRelief(opts, g) {
+    var col = opts.colors, L = P.layer, n = g.n, m = g.m, R = g.R, qr = g.qr;
+    var baseC = col.field, inkC = col.ink === baseC ? 'black' : col.ink;
+    var dark = traceGrid(function (c, r) { return r >= 0 && c >= 0 && r < n && c < n && qr.matrix[r][c]; }, n, n)
+      .map(function (l) { return insetRect(l, 0.02).map(function (p) { return [(p[0] - n / 2) * m, (n / 2 - p[1]) * m]; }); });
+    // the dent, mirrored because it is seen from underneath
+    var src = [];
+    if (opts.recess && opts.recess.length) { var kk = dims(opts.address, opts.image).k; src = opts.recess.map(function (r) { return r.map(function (p) { return [p[0] * kk, p[1] * kk]; }); }); }
+    else if (g.badge) src = g.badge.light;
+    else if (g.img.length) src = engravePolarity(g.img);
+    var dent = src.map(function (r) { return r.map(function (p) { return [-p[0], p[1]]; }); });
+
+    var parts = {}, order = [];
+    function part(colour) { if (!parts[colour]) { parts[colour] = { colour: colour, prisms: [], volume: 0 }; order.push(colour); } return parts[colour]; }
+    function put(colour, rings, z0, z1) {
+      ringsToPolys(rings).forEach(function (p) { var a = polyArea(p); if (a < 0.01) return; var pt = part(colour); pt.prisms.push(prism(p, z0, z1)); pt.volume += a * (z1 - z0); });
+    }
+    var nb = Math.round(RELIEF.base / L), nd = Math.round(RELIEF.recess / L), field = circle(g.fieldR, 160), k, o;
+    // the base: three bevelled layers with the dent in them, then one slab
+    for (k = 0; k < P.bevel.length; k++) { o = outline(R, P.bevel[k]); put(baseC, [o.ring, o.hole].concat(k < nd ? dent : []), k * L, (k + 1) * L); }
+    put(baseC, [g.o0.ring, g.o0.hole], P.bevel.length * L, nb * L);
+    // the second colour: the code, and a rim that stands a little higher and is bevelled on top
+    var z = RELIEF.base, nr = Math.round(RELIEF.rim / L);
+    put(inkC, dark, z, z + RELIEF.code);
+    for (k = 0; k < nr; k++) { o = outline(R, P.bevel[nr - 1 - k] || 0); put(inkC, [o.ring, o.hole, field], z + k * L, z + (k + 1) * L); }
+    var list = [baseC, inkC].map(function (c, i) { var p = part(c); p.slot = i + 1; p.grams = p.volume / 1000 * DENSITY; return p; });
+    // for a preview only: a film on the floor of the dent, so a renderer can show it in shadow
+    var shade = { colour: baseC, prisms: [] };
+    ringsToPolys(dent).forEach(function (p) { if (polyArea(p) >= 0.01) shade.prisms.push(prism(p, RELIEF.recess - 0.04, RELIEF.recess)); });
+    return {
+      shade: shade, method: 'single', codeUp: true, parts: list, payload: g.text, qr: qr, R: R, fieldR: g.fieldR, width: 2 * R, height: g.o0.top + R,
+      thickness: RELIEF.base + RELIEF.rim, loopY: g.o0.cy, grams: list[0].grams + list[1].grams, outline: g.o0, dark: dark, image: dent,
+      swap: { z: RELIEF.base, layer: nb + 1, from: baseC, to: inkC }
+    };
+  }
+
+  // ---- STL (binary), for any slicer ----
+  function toSTL(parts) {
+    var count = 0; parts.forEach(function (p) { p.prisms.forEach(function (pr) { count += pr.tris.length / 3; }); });
+    var buf = new ArrayBuffer(84 + 50 * count), dv = new DataView(buf), o = 84;
+    dv.setUint32(80, count, true);
+    parts.forEach(function (p) { p.prisms.forEach(function (pr) {
+      var v = pr.verts, t = pr.tris;
+      for (var i = 0; i < t.length; i += 3) {
+        var a = t[i] * 3, b = t[i + 1] * 3, c = t[i + 2] * 3;
+        var ux = v[b] - v[a], uy = v[b + 1] - v[a + 1], uz = v[b + 2] - v[a + 2], wx = v[c] - v[a], wy = v[c + 1] - v[a + 1], wz = v[c + 2] - v[a + 2];
+        var nx = uy * wz - uz * wy, ny = uz * wx - ux * wz, nz = ux * wy - uy * wx, len = Math.hypot(nx, ny, nz) || 1;
+        dv.setFloat32(o, nx / len, true); dv.setFloat32(o + 4, ny / len, true); dv.setFloat32(o + 8, nz / len, true); o += 12;
+        [a, b, c].forEach(function (q) { dv.setFloat32(o, v[q], true); dv.setFloat32(o + 4, v[q + 1], true); dv.setFloat32(o + 8, v[q + 2], true); o += 12; });
+        o += 2;
+      }
+    }); });
+    return new Uint8Array(buf);
   }
 
   // flat triangle soup for a renderer: Float32Array of xyz per part
@@ -335,7 +420,7 @@
   }
 
   // ---- a picture (RGBA pixels) -> image rings, for "use your own logo" ----
-  function traceImage(rgba, w, h) {
+  function traceImage(rgba, w, h, frame) {
     var transparent = 0, i, total = w * h;
     for (i = 0; i < total; i++) if (rgba[4 * i + 3] < 128) transparent++;
     var hasAlpha = transparent / total > 0.01, mask = new Uint8Array(total), dark = 0, opaque = 0;
@@ -350,9 +435,10 @@
     if (!loops.length) return null;
     var b = [1e9, 1e9, -1e9, -1e9]; loops.forEach(function (l) { var bb = bbox(l); b = [Math.min(b[0], bb[0]), Math.min(b[1], bb[1]), Math.max(b[2], bb[2]), Math.max(b[3], bb[3])]; });
     var s = 1 / Math.max(b[2] - b[0], b[3] - b[1]), cx = (b[0] + b[2]) / 2, cyy = (b[1] + b[3]) / 2;
+    if (frame) { s = frame.s; cx = frame.cx; cyy = frame.cy; }                 // keep the caller's coordinates instead of centring the shape
     return { rings: loops.map(function (l) { return l.map(function (p) { return [(p[0] - cx) * s, (cyy - p[1]) * s]; }); }) };
   }
 
-  var api = { P: P, validAddress: validAddress, payload: payload, makeQR: makeQR, build: build, soup: soup, to3mf: to3mf, zip: zip, traceImage: traceImage, ringsToPolys: ringsToPolys, traceGrid: traceGrid };
+  var api = { P: P, validAddress: validAddress, payload: payload, makeQR: makeQR, build: build, dims: dims, engravePolarity: engravePolarity, soup: soup, to3mf: to3mf, toSTL: toSTL, zip: zip, traceImage: traceImage, ringsToPolys: ringsToPolys, traceGrid: traceGrid };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LNKEY = api;
 })(typeof window !== 'undefined' ? window : globalThis);

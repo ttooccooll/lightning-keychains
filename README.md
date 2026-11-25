@@ -1,14 +1,16 @@
-# lnkey: Lightning-address keychains for the Bambu A1 + AMS lite
+# Lightning keychains
 
-Type a Lightning address, get a multi-colour Bambu Studio project: the QR code on one side, one
-big picture on the other. No words on either side.
+Type a Lightning address, get a keychain to 3D print: the QR code on one side and a picture, a
+logo or a few words on the other.
 
 There are two ways in:
 
-- **The website** (`web/index.html`): anyone types their address, picks a picture or uploads
-  their logo, picks colours and downloads the print file. Nothing to install. See "The website".
-- **The command line** (`lnkey.py`): the same tag plus the other editions, plates of 19, NFC
-  pockets and CSV batches for orders.
+- **The website** (`web/`): anyone types their address, picks what goes on the back, says what
+  kind of printer they have and downloads the print file. A multi-colour printer gets a `.3mf`
+  or one STL per colour. A printer that takes one filament at a time gets a single STL with one
+  filament swap. Nothing to install. See "The website".
+- **The command line** (`lnkey.py`): made for the Bambu A1 with AMS lite. It builds the same tag
+  plus the other editions, plates of 19, NFC pockets and CSV batches for orders.
 
 ```
 pip install -r requirements.txt
@@ -37,7 +39,8 @@ Each run writes, next to the `.3mf`:
 | Size (this address) | 47 × 55 × 2.8 mm | 47 × 55 × 3.0 mm | 47 × 55 × 2.8 mm |
 
 The QR side carries the code and the rim and nothing else. The back carries one picture, grown
-until it nearly touches the rim. There is no lettering anywhere on the tag.
+until it nearly touches the rim. `lnkey.py` puts no lettering on the tag; words are an option on
+the website.
 
 Colour changes are counted per *plate*, not per tag: 19 round tags (or 29 square ones) share the
 same handful of changes. Print full plates and the purge waste all but disappears.
@@ -117,10 +120,24 @@ Only put an organisation's logo on a tag when that organisation has asked for it
 
 ## The website
 
-`web/` is a one-page site: a visitor types a Lightning address, picks one of 24 pictures or
-uploads a logo (traced to one colour), picks a colourway, turns the tag round in 3D and downloads
-the `.3mf`. Everything happens in the visitor's browser; nothing is uploaded and there is no
-server to run.
+`web/` is a one-page site. A visitor types a Lightning address, picks a picture, one of the
+slogans, their own words or their own logo, picks a colourway, turns the tag round in 3D and
+downloads the print file. Everything happens in the visitor's browser; nothing is uploaded and
+there is no server to run.
+
+Two kinds of printer are covered:
+
+| | Several colours | One filament |
+|---|---|---|
+| For | AMS, MMU, tool changers | any printer |
+| Tag | flat coin, code inlaid flush, back in colour | code and rim raised in a second colour |
+| Prints | code-side down | code-side up |
+| File | `.3mf` for Bambu Studio and OrcaSlicer, or one STL per colour | one STL |
+| Filament changes | by the printer | one, by hand, at 2.2 mm (layer 12 at 0.2 mm layers) |
+| Back | picture, words or logo in the accent colour | the same design pressed 0.6 mm into the plastic |
+
+On the one-filament tag, wide shapes are pressed in as a 3 mm outline, so nothing has to bridge
+further than that. Letters and thin shapes go in whole.
 
 ```
 cd web
@@ -129,14 +146,16 @@ npm run build      # writes web/dist/index.html, the whole site in one file
 npm test           # writes test files into web/out for verify.py
 ```
 
-- It makes the retail tag: flat coin, QR face-down on the plate, picture on the back. The
-  preview is drawn from the same solids that go into the file.
+- The preview is drawn from the same solids that go into the file.
+- Words are set in the site's display face, broken into the lines that make the letters largest,
+  and traced into the same kind of shape as a picture.
 - Two addresses are set near the top of the script in `web/index.src.html`: `OWNER_ADDRESS`
   (shown until the visitor types their own) and `EKASI_ADDRESS`.
-- "Load the Bitcoin Ekasi tag" shows their logo on the back with their address on the front.
-  The logo stays with that address: when the visitor types another one, the picture goes back
-  to the one they had, and only the colourways that keep the logo black, white and orange stay
-  open while it is showing.
+- Bitcoin Ekasi's logo is one of the pictures, and "Load the Bitcoin Ekasi tag" puts it together
+  with their address. On a multi-colour tag only the colourways that keep the logo black, white
+  and orange stay open while it is showing.
+- "Support it with sats" asks `TIP_ADDRESS` for a Lightning invoice with `TIP_NOTE` attached, so
+  the payment arrives labelled as a donation for the site. Both are set in `web/index.src.html`.
 - `python tools/make_web_images.py` rewrites `web/images.json` from the icon files, and with
   `--badge` it turns a round logo into `web/ekasi.json`.
 - `vercel.json` at the top of the repository tells Vercel to build `web/` and serve `web/dist`.
@@ -242,8 +261,9 @@ What it settled for these designs:
 - Narrower line widths and a 0.2 mm nozzle were tried (`PROFILES` in the script). Neither made
   the code measurably truer, and the fine nozzle took 3.5 times as long, so the stock 0.4 mm
   profile is the one to use.
-- Pictures replaced lettering altogether: big filled shapes print cleanly where 2-3 mm letters
-  were the weakest part of the earlier tags.
+- `lnkey.py` uses pictures in place of small lettering: big filled shapes print cleanly where
+  2-3 mm letters were the weakest part of earlier tags. The website sets its words large, in a
+  heavy face.
 
 ## Edges
 

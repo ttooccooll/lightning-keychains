@@ -72,6 +72,7 @@ def badge(path, ident, label, out):
     mitre = dict(join_style=2, mitre_limit=2.0)      # square corners: no clusters of arc points
     cut = light.union(accent).buffer(gap, **mitre)   # the dark face stops a hair short of both
     accent = accent.buffer(-gap, **mitre)            # ... and the accent a hair short of the light
+    light = light.buffer(-gap / 2, **mitre)          # no two light shapes meet at a single point
     apart = 0.0003                                   # 0.014 mm on a 47 mm tag
     data = {"id": ident, "label": label, "badge": True, "cut": rings_of(cut, 5, apart),
             "light": rings_of(light, 5, apart), "accent": rings_of(accent, 5, apart)}
