@@ -1,0 +1,10 @@
+segno
+shapely>=2.0
+manifold3d
+numpy
+matplotlib
+svgelements
+Pillow
+# verify.py only:
+zxing-cpp
+opencv-python-headless

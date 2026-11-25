@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+out/
+demo-out*/
+print-check/
+web/node_modules/
+web/dist/
+web/out/
+.vercel/
+.DS_Store

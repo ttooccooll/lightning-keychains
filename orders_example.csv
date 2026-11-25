@@ -1,0 +1,14 @@
+address,edition,qty,shape,colorway,back,logo,logo_mode,nfc,name
+jasonbohio@blink.sv,meetup,2,,,,,,,demo-meetup
+jasonbohio@blink.sv,retail,1,,classic,btc,,,,demo-bitcoin
+jasonbohio@blink.sv,retail,1,,classic,bolt,,,,demo-bolt
+jasonbohio@blink.sv,retail,1,,classic,trombone,,,,demo-trombone
+jasonbohio@blink.sv,retail,1,,classic,coffee,,,,demo-coffee
+jasonbohio@blink.sv,retail,1,,classic,barber,,,,demo-barber
+jasonbohio@blink.sv,retail,1,,classic,pets,,,,demo-pets
+jasonbohio@blink.sv,retail,1,,classic,foodtruck,,,,demo-foodtruck
+jasonbohio@blink.sv,retail,1,,classic,pill,,,,demo-pill
+jasonbohio@blink.sv,retail,1,,classic,sats,,,,demo-sats
+jasonbohio@blink.sv,retail,1,square,classic,heart,,,,demo-square
+jasonbohio@blink.sv,retail,1,,classic,,samples/logo-test/your-logo.svg,color,,demo-your-logo
+bitcoinekasi@blink.sv,ekasi,2,,,,,,,demo-ekasi

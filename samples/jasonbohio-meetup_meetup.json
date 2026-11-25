@@ -1,0 +1,58 @@
+{
+ "spec": {
+  "address": "jasonbohio@blink.sv",
+  "payload_mode": "uri",
+  "edition": "meetup",
+  "shape": "round",
+  "style": "relief",
+  "colorway": "mono",
+  "module": 1.0,
+  "error": null,
+  "invert": false,
+  "thickness": 3.0,
+  "base": 2.2,
+  "relief": 0.4,
+  "rim": 1.8,
+  "rim_extra": 0.2,
+  "inlay": 0.6,
+  "back": "none",
+  "logo": "",
+  "logo_mode": "mono",
+  "logo_scale": 1.0,
+  "back_top": "",
+  "back_bottom": "",
+  "back_lines": [],
+  "back_rim": false,
+  "nfc": false,
+  "tab": true,
+  "hole": 5.0,
+  "dark_comp": null,
+  "loop_wall": 3.0,
+  "loop_fillet": 3.5,
+  "name": "jasonbohio-meetup"
+ },
+ "build": {
+  "address": "jasonbohio@blink.sv",
+  "payload": "lightning:jasonbohio@blink.sv",
+  "qr_version": 3,
+  "qr_error": "Q",
+  "modules": 29,
+  "module_mm": 1.0,
+  "size_mm": "47.0 x 55.3 x 2.8",
+  "style": "relief",
+  "colorway": "mono",
+  "filaments": {
+   "slot 1": "white",
+   "slot 2": "black"
+  },
+  "grams": {
+   "white": 4.87,
+   "black": 0.4
+  },
+  "total_g": 5.27,
+  "layers": 14,
+  "colour_changes_per_plate": 1,
+  "qr_face": "up",
+  "notes": []
+ }
+}

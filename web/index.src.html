@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lightning Keychains</title>
+<meta name="description" content="Type a Lightning address, pick a picture, and download a multi-colour keychain to 3D print: a QR code on one side that pays you in bitcoin, your picture on the other.">
+<meta property="og:title" content="Lightning Keychains">
+<meta property="og:description" content="Get paid in bitcoin from your key ring. Type a Lightning address, pick a picture, download the print file.">
+<meta name="theme-color" content="#F7931A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='18' r='12' fill='%23F7931A' stroke='%2319191B' stroke-width='3'/%3E%3Ccircle cx='16' cy='4.5' r='3' fill='none' stroke='%2319191B' stroke-width='2.4'/%3E%3C/svg%3E">
+<meta name="description" content="Put your Lightning address on a keychain. Type an address, pick a picture, download the print file.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --stage: #F7931A;          /* the wall behind the tag */
+    --fg: #000000;             /* type and strokes on the wall */
+    --echo: rgba(0,0,0,.085);  /* the giant address behind the tag */
+    --paper: #FFF7EA;          /* fields and tiles */
+    --paper-fg: #000000;
+    --focus: #FFFFFF;
+    --display: "Anton", "Arial Narrow", Impact, sans-serif;
+    --ui: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--stage); color: var(--fg); font: 500 16px/1.45 var(--ui);
+    transition: background-color .5s ease, color .5s ease; -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  .app { display: grid; grid-template-columns: minmax(0, 1.22fr) minmax(360px, 520px); min-height: 100vh; }
+
+  /* ---------- stage ---------- */
+  .stage { position: sticky; top: 0; align-self: start; height: 100vh; overflow: hidden; }
+  .viewwrap { position: absolute; inset: 0; touch-action: pan-y; }
+  .head { position: absolute; z-index: 2; left: clamp(20px, 3vw, 44px); top: clamp(18px, 2.6vw, 34px); max-width: min(44%, 500px); pointer-events: none; }
+  .echo {
+    position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding-left: 3vw;
+    font: 400 20vw/0.86 var(--display); letter-spacing: -0.012em; color: var(--echo); text-transform: lowercase;
+    white-space: nowrap; user-select: none; pointer-events: none; transition: color .5s ease;
+  }
+  .echo span { display: block; }
+  .echo span + span { margin-left: 9vw; }
+  canvas#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; outline: none; }
+  canvas#view:active { cursor: grabbing; }
+  .mark { font: 400 20px/1 var(--display); letter-spacing: .03em; }
+  .hint { position: absolute; left: clamp(20px, 3vw, 44px); bottom: clamp(18px, 2.6vw, 34px); font-size: 14px; max-width: 30ch; }
+  .sides { position: absolute; right: clamp(16px, 2.4vw, 36px); bottom: clamp(18px, 2.6vw, 34px); display: flex; gap: 8px; }
+  .sides button {
+    font: 700 14px/1 var(--ui); color: var(--fg); background: transparent; border: 2px solid var(--fg); border-radius: 999px;
+    padding: 10px 16px; cursor: pointer; transition: background-color .15s, color .15s;
+  }
+  .sides button[aria-pressed="true"] { background: var(--fg); color: var(--stage); }
+  .nogl { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; padding: 10%; text-align: center; font-size: 18px; }
+
+  /* ---------- panel ---------- */
+  .panel { padding: clamp(18px, 2.6vw, 34px) clamp(20px, 3vw, 44px) 32px; display: flex; flex-direction: column; gap: 17px; justify-content: center; min-height: 100vh; }
+  h1 { font: 400 clamp(44px, 5.4vw, 88px)/0.96 var(--display); letter-spacing: .004em; margin: 0; }
+  .lede { margin: 14px 0 0; font-size: 17px; max-width: 25ch; }
+  .group > label, .group > .label { display: block; font-weight: 700; font-size: 15px; margin-bottom: 9px; }
+  .address {
+    width: 100%; font: 700 clamp(19px, 1.7vw, 24px)/1.2 var(--ui); padding: 17px 18px; border-radius: 16px; border: 3px solid var(--fg);
+    background: var(--paper); color: var(--paper-fg); outline: none; letter-spacing: -.01em;
+  }
+  .address::placeholder { color: rgba(0,0,0,.38); }
+  .address:focus-visible, button:focus-visible, .tile:focus-visible, .swatch:focus-visible, .upload:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; }
+  .state { min-height: 1.45em; margin: 8px 2px 0; font-size: 14px; }
+  .state.bad { font-weight: 700; }
+
+  .tiles { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 7px; }
+  .tile, .upload {
+    aspect-ratio: 1; border-radius: 14px; border: 2px solid transparent; background: var(--paper); color: var(--paper-fg);
+    display: grid; place-items: center; cursor: pointer; padding: 0; position: relative; transition: transform .12s ease;
+  }
+  .tile svg { width: 62%; height: 62%; display: block; }
+  .tile:hover, .upload:hover { transform: translateY(-2px); }
+  .tile[aria-pressed="true"] { background: var(--fg); color: var(--stage); border-color: var(--fg); }
+  .upload { border: 2px dashed var(--fg); background: transparent; color: var(--fg); font: 700 11px/1.1 var(--ui); text-align: center; }
+  .upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload[aria-pressed="true"] { background: var(--fg); color: var(--stage); border-style: solid; }
+  .picked { margin: 8px 2px 0; font-size: 14px; min-height: 1.45em; }
+
+  .swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+  .swatch {
+    display: inline-flex; align-items: center; gap: 9px; padding: 7px 14px 7px 8px; border-radius: 999px; cursor: pointer;
+    border: 2px solid var(--fg); background: transparent; color: var(--fg); font: 700 14px/1 var(--ui);
+  }
+  .swatch i { width: 26px; height: 26px; border-radius: 50%; display: block; border: 2px solid rgba(0,0,0,.55); }
+  .swatch[aria-pressed="true"] { background: var(--fg); color: var(--stage); }
+
+  .go {
+    width: 100%; font: 400 clamp(24px, 2.1vw, 30px)/1 var(--display); letter-spacing: .03em; padding: 19px 20px; border-radius: 18px; cursor: pointer;
+    background: var(--fg); color: var(--stage); border: 3px solid var(--fg); transition: transform .12s ease, background-color .5s, color .5s;
+  }
+  .go:hover { transform: translateY(-2px); }
+  .go:active { transform: translateY(1px); }
+  .go[disabled] { opacity: .45; cursor: not-allowed; transform: none; }
+  .facts { margin: 12px 2px 0; font-size: 14px; }
+  .facts b { font-weight: 700; }
+  .after { margin: 6px 2px 0; font-size: 14px; min-height: 1.45em; font-weight: 700; }
+  .ekasi { font: inherit; font-weight: 700; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  .small { font-size: 14px; margin: 0; }
+
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    .stage { position: relative; height: auto; overflow: visible; }
+    .head { position: static; max-width: none; padding: 22px 20px 0; }
+    .viewwrap { position: relative; inset: auto; height: min(96vw, 58vh); overflow: hidden; }
+    .panel { padding-top: 8px; min-height: 0; }
+    .tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .hint { display: none; }
+    .sides { right: 50%; transform: translateX(50%); bottom: 10px; }
+  }
+  @media (prefers-reduced-motion: reduce) { body, .echo, .go, .tile, .upload { transition: none; } }
+  .swatch:disabled { opacity: .32; cursor: not-allowed; }
+  .ekasi[aria-pressed="true"] { text-decoration-thickness: 3px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="stage">
+    <header class="head">
+      <h1>Get paid in bitcoin from your key ring.</h1>
+      <p class="lede">Type your Lightning address and pick a picture. One side is the code people scan. The other is yours.</p>
+    </header>
+    <div class="viewwrap">
+      <div class="echo" id="echo" aria-hidden="true"><span></span><span></span></div>
+      <canvas id="view" tabindex="0" aria-label="3D preview of the keychain. Drag to spin, press Enter to flip."></canvas>
+      <div class="nogl" id="nogl">This browser cannot draw the 3D preview. Your print file still downloads.</div>
+      <p class="hint">Drag it around. Tap it to flip.</p>
+      <div class="sides" role="group" aria-label="Which side to show">
+        <button type="button" id="showCode" aria-pressed="false">Code</button>
+        <button type="button" id="showPic" aria-pressed="true">Picture</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="mark">Lightning Keychains</div>
+
+    <div class="group">
+      <label for="addr">Lightning address</label>
+      <input class="address" id="addr" type="text" inputmode="email" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="you@wallet.com">
+      <p class="state" id="state" aria-live="polite"></p>
+    </div>
+
+    <div class="group">
+      <span class="label" id="picLabel">Picture</span>
+      <div class="tiles" id="tiles" role="group" aria-labelledby="picLabel"></div>
+      <p class="picked" id="picked" aria-live="polite"></p>
+    </div>
+
+    <div class="group">
+      <span class="label" id="colLabel">Colours</span>
+      <div class="swatches" id="swatches" role="group" aria-labelledby="colLabel"></div>
+    </div>
+
+    <div>
+      <button class="go" id="go" type="button">Download print file</button>
+      <p class="after" id="after" aria-live="polite"></p>
+      <p class="facts" id="facts"></p>
+    </div>
+
+    <p class="small">Made with Bitcoin Ekasi in mind, where these tags started. <button class="ekasi" id="ekasi" type="button">Load the Bitcoin Ekasi tag</button></p>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>/*__QRCODE__*/</script>
+<script>/*__EARCUT__*/</script>
+<script>/*__ENGINE__*/</script>
+<script>
+(function () {
+  'use strict';
+  var IMAGES = /*__IMAGES__*/[];
+  var EKASI = /*__EKASI__*/null;                      // Bitcoin Ekasi's logo, used with their permission
+  var OWNER_ADDRESS = 'jasonbohio@blink.sv';          // shown until a visitor types their own
+  var EKASI_ADDRESS = 'bitcoinekasi@blink.sv';
+
+  var HEX = { white: '#F4F1EA', black: '#19191B', orange: '#F7931A', yellow: '#F7C62F', red: '#D7263D', cream: '#EFE6D0', navy: '#1B2A4A', teal: '#0E9AA7' };
+  var WAYS = [
+    { id: 'classic',  name: 'Classic',  colors: { body: 'white',  field: 'white',  ink: 'black', accent: 'orange' }, stage: '#F7931A', fg: '#000000', echo: 'rgba(0,0,0,.085)', focus: '#FFFFFF' },
+    { id: 'mono',     name: 'Ink',      colors: { body: 'white',  field: 'white',  ink: 'black', accent: 'black'  }, stage: '#2FB7AE', fg: '#000000', echo: 'rgba(0,0,0,.08)',  focus: '#FFFFFF' },
+    { id: 'midnight', name: 'Midnight', colors: { body: 'black',  field: 'white',  ink: 'black', accent: 'orange' }, stage: '#F3E7CF', fg: '#000000', echo: 'rgba(0,0,0,.07)',  focus: '#F7931A' },
+    { id: 'bitcoin',  name: 'Orange',   colors: { body: 'orange', field: 'orange', ink: 'black', accent: 'white'  }, stage: '#16233F', fg: '#FFF3DC', echo: 'rgba(255,243,220,.07)', focus: '#F7931A' },
+    { id: 'sunny',    name: 'Sunny',    colors: { body: 'yellow', field: 'yellow', ink: 'black', accent: 'red'    }, stage: '#E8452C', fg: '#000000', echo: 'rgba(0,0,0,.09)',  focus: '#FFFFFF' }
+  ];
+
+  var $ = function (id) { return document.getElementById(id); };
+  var state = { address: OWNER_ADDRESS, image: IMAGES[0], way: WAYS[0], custom: null, typed: false };
+  var tag = null;
+
+  // ---------- picture tiles ----------
+  function ringsPath(rings) {
+    return rings.map(function (r) { return 'M' + r.map(function (p) { return (p[0] * 100).toFixed(1) + ' ' + (-p[1] * 100).toFixed(1); }).join('L') + 'Z'; }).join('');
+  }
+  function tileSvg(rings) { return '<svg viewBox="-56 -56 112 112" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="' + ringsPath(rings) + '"/></svg>'; }
+  var tiles = $('tiles');
+  IMAGES.forEach(function (im) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'tile'; b.title = im.label; b.setAttribute('aria-label', im.label); b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = tileSvg(im.rings);
+    b.addEventListener('click', function () { state.image = im; refresh('picture'); });
+    im.el = b; tiles.appendChild(b);
+  });
+  var up = document.createElement('label');
+  up.className = 'upload'; up.setAttribute('aria-pressed', 'false');
+  up.innerHTML = '<span>Your<br>logo</span><input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" aria-label="Use your own logo">';
+  tiles.appendChild(up);
+  up.querySelector('input').addEventListener('change', function (e) {
+    var f = e.target.files && e.target.files[0]; if (!f) return;
+    var url = URL.createObjectURL(f), img = new Image();
+    img.onload = function () {
+      var S = 360, k = S / Math.max(img.naturalWidth || S, img.naturalHeight || S), w = Math.max(1, Math.round((img.naturalWidth || S) * k)), h = Math.max(1, Math.round((img.naturalHeight || S) * k));
+      var c = document.createElement('canvas'); c.width = w; c.height = h; var g = c.getContext('2d'); g.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      var traced = null; try { traced = LNKEY.traceImage(g.getImageData(0, 0, w, h).data, w, h); } catch (err) { traced = null; }
+      if (!traced) { $('picked').textContent = 'That picture came out blank. Try one with a dark shape on a plain or see-through background.'; return; }
+      state.custom = { id: 'custom', label: f.name.replace(/\.[^.]+$/, ''), rings: traced.rings }; state.image = state.custom; refresh('picture');
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); $('picked').textContent = 'That file would not open as a picture. PNG, JPG or SVG work.'; };
+    img.src = url; e.target.value = '';
+  });
+
+  // ---------- colour swatches ----------
+  WAYS.forEach(function (w) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'swatch'; b.setAttribute('aria-pressed', 'false');
+    var c = w.colors;
+    b.innerHTML = '<i style="background:conic-gradient(' + HEX[c.body] + ' 0 50%,' + HEX[c.ink] + ' 50% 75%,' + HEX[c.accent] + ' 75% 100%)"></i>' + w.name;
+    b.addEventListener('click', function () { state.way = w; refresh('picture'); });
+    w.el = b; $('swatches').appendChild(b);
+  });
+
+  // ---------- address ----------
+  var addr = $('addr'), timer = null;
+  addr.addEventListener('input', function () {
+    state.typed = true; clearTimeout(timer);
+    timer = setTimeout(function () { state.address = addr.value.trim(); refresh('code'); }, 140);
+  });
+  $('ekasi').addEventListener('click', function () {
+    addr.value = EKASI_ADDRESS; state.typed = true; state.address = EKASI_ADDRESS;
+    if (EKASI) { if (state.image !== EKASI) state.before = state.image; state.image = EKASI; state.way = WAYS[0]; }
+    else { state.image = IMAGES.filter(function (i) { return i.id === 'surfing'; })[0] || state.image; state.way = WAYS[1]; }
+    refresh('picture');
+  });
+  // Their logo belongs with their address and their colours: it leaves when the address changes,
+  // and only the colourways that keep it black, white and orange stay open.
+  function logoWay(w) { return w.colors.ink === 'black' && w.colors.field === 'white' && w.colors.accent === 'orange'; }
+
+  function setTheme(w) {
+    var s = document.documentElement.style;
+    s.setProperty('--stage', w.stage); s.setProperty('--fg', w.fg); s.setProperty('--echo', w.echo); s.setProperty('--focus', w.focus);
+  }
+  function setEcho(a) {
+    var parts = a.split('@'), spans = $('echo').children;
+    spans[0].textContent = parts[0] || ''; spans[1].textContent = parts.length > 1 ? '@' + parts.slice(1).join('@') : '';
+    var longest = Math.max(spans[0].textContent.length, spans[1].textContent.length + 2, 6);
+    $('echo').style.fontSize = 'min(' + (118 / longest).toFixed(2) + 'vw, 46vh)';
+  }
+
+  function refresh(show) {
+    var ok = LNKEY.validAddress(state.address), shown = ok ? state.address.toLowerCase() : OWNER_ADDRESS;
+    if (EKASI && state.image === EKASI && shown !== EKASI_ADDRESS) { state.image = state.before || IMAGES[0]; show = 'picture'; }
+    var logo = !!EKASI && state.image === EKASI;
+    if (logo && !logoWay(state.way)) state.way = WAYS[0];
+    WAYS.forEach(function (w) { w.el.disabled = logo && !logoWay(w); });
+    $('ekasi').setAttribute('aria-pressed', String(logo));
+    IMAGES.forEach(function (im) { im.el.setAttribute('aria-pressed', String(state.image === im)); });
+    up.setAttribute('aria-pressed', String(state.image === state.custom && !!state.custom));
+    WAYS.forEach(function (w) { w.el.setAttribute('aria-pressed', String(state.way === w)); });
+    setTheme(state.way); setEcho(shown);
+    try { tag = LNKEY.build({ address: shown, image: state.image, colors: state.way.colors }); }
+    catch (e) { tag = null; }
+    var st = $('state');
+    if (!state.typed) { st.className = 'state'; st.textContent = 'Showing the maker’s address until you type yours.'; }
+    else if (!state.address) { st.className = 'state'; st.textContent = 'It looks like an email address: name@wallet.com'; }
+    else if (!ok) { st.className = 'state bad'; st.textContent = 'Not a Lightning address yet. It needs a name, an @ and a domain.'; }
+    else if (!tag) { st.className = 'state bad'; st.textContent = 'That address is too long to fit on a tag.'; }
+    else { st.className = 'state'; st.textContent = 'Scans as lightning:' + shown; }
+    $('picked').textContent = logo ? 'Bitcoin Ekasi’s logo. It stays with their address.' :
+      state.image === state.custom && state.custom ? 'Your logo, traced in one colour. Bold shapes print best.' : state.image.label;
+    $('go').disabled = !(tag && (ok || !state.typed));
+    if (tag) {
+      var names = tag.parts.map(function (p) { return p.colour; });
+      $('facts').innerHTML = '<b>' + tag.width.toFixed(0) + ' by ' + tag.height.toFixed(0) + ' mm</b>, 3 mm thick, ' + tag.grams.toFixed(1) + ' g of plastic in ' +
+        names.join(names.length > 2 ? ', ' : ' and ').replace(/, ([^,]*)$/, ' and $1') + '. Prints code-side down on a Bambu A1 with the AMS.';
+      if (view) view.setTag(tag, show);
+    }
+    $('after').textContent = '';
+  }
+
+  // ---------- download ----------
+  $('go').addEventListener('click', function () {
+    if (!tag) return;
+    var bytes = LNKEY.to3mf(tag, tag.payload.replace('lightning:', '')), base = tag.payload.replace('lightning:', '').replace(/[^a-z0-9]+/g, '-') + '-keychain';
+    var after = $('after');
+    try {
+      var url = URL.createObjectURL(new Blob([bytes], { type: 'model/3mf' })), a = document.createElement('a');
+      a.href = url; a.download = base + '.3mf'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      after.textContent = 'Downloaded. Open it in Bambu Studio and load the filaments in the order shown.';
+    } catch (e) { after.textContent = 'This view cannot save files. Open the page in its own browser tab.'; }
+  });
+
+  // ---------- the 3D view ----------
+  var view = null;
+  function makeView() {
+    if (!window.THREE) return null;
+    var T = window.THREE, canvas = $('view'), renderer;
+    try { renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, preserveDrawingBuffer: true }); } catch (e) { return null; }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.outputEncoding = T.sRGBEncoding; renderer.toneMapping = T.NoToneMapping;   // colours stay the filament colours
+    renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
+    var scene = new T.Scene(), camera = new T.PerspectiveCamera(26, 1, 10, 1200);
+
+    // a small studio for reflections: grey room, three soft boxes
+    var env = new T.Scene();
+    env.add(new T.Mesh(new T.SphereGeometry(400, 24, 16), new T.MeshBasicMaterial({ color: 0x6f6f6f, side: T.BackSide })));
+    [[0, 260, 120, 320, 160, 1.9], [-300, 40, 160, 160, 300, 1.35], [300, -40, 120, 120, 260, 1.0], [0, -300, 60, 400, 120, 0.5]].forEach(function (b) {
+      var m = new T.Mesh(new T.PlaneGeometry(b[3], b[4]), new T.MeshBasicMaterial({ color: new T.Color(b[5], b[5], b[5]), side: T.DoubleSide }));
+      m.position.set(b[0], b[1], b[2]); m.lookAt(0, 0, 0); env.add(m);
+    });
+    var pm = new T.PMREMGenerator(renderer); scene.environment = pm.fromScene(env, 0.03, 1, 2000).texture; pm.dispose();
+
+    var key = new T.DirectionalLight(0xffffff, 0.62); key.position.set(-70, 120, 170); key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024); key.shadow.radius = 7; key.shadow.bias = -0.0006;
+    var sc = key.shadow.camera; sc.left = -90; sc.right = 90; sc.top = 110; sc.bottom = -90; sc.near = 10; sc.far = 500;
+    scene.add(key); scene.add(new T.HemisphereLight(0xffffff, 0xc9c2b8, 0.46));
+
+    var wall = new T.Mesh(new T.PlaneGeometry(900, 900), new T.ShadowMaterial({ opacity: 0.2 }));
+    wall.position.z = -42; wall.receiveShadow = true; scene.add(wall);
+
+    // Everything hangs from one point, the top of the split ring. The ring turns about the hanging
+    // line; the tag turns about the same line and tips about the spot where the ring passes
+    // through its loop, so the ring stays threaded however the tag is spun or tilted.
+    var RING_R = 12.5, WIRE = 0.95, SEAT = 0.5, SKEW = 0.55;      // SEAT: wire centre above the middle of the hole; SKEW: how far the ring can turn in the loop
+    var rig = new T.Group(), hook = new T.Group(), ringTurn = new T.Group(), tip = new T.Group(), body = new T.Group();
+    scene.add(rig); rig.add(hook); hook.add(ringTurn); hook.add(tip); tip.add(body);
+    var ring = new T.Mesh(new T.TorusGeometry(RING_R, WIRE, 18, 96), new T.MeshStandardMaterial({ color: 0xe3e6ea, metalness: 1, roughness: 0.14, envMapIntensity: 1.0 }));
+    ring.castShadow = true; ring.position.set(0, -RING_R, 0); ring.rotation.set(0, Math.PI / 2, 0); ringTurn.add(ring);
+    var ringOff = SKEW;
+    tip.position.set(0, -2 * RING_R, 0);
+    var mats = {};
+    function mat(c) { if (!mats[c]) mats[c] = new T.MeshStandardMaterial({ color: new T.Color(HEX[c]).convertSRGBToLinear(), roughness: 0.6, metalness: 0, envMapIntensity: 0.3 }); return mats[c]; }
+
+    var yaw = 0.5, pitch = -0.08, vy = 0, target = null, dragging = false, moved = 0, lx = 0, ly = 0, t0 = performance.now(), still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function setTag(tg, show) {
+      while (body.children.length) { var m = body.children.pop(); m.geometry.dispose(); }
+      var cyc = (tg.height - 2 * tg.R) / 2;                       // centre the tag between its bottom edge and the top of the loop
+      tg.parts.forEach(function (p) {
+        var g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(LNKEY.soup(p), 3)); g.computeVertexNormals();
+        var mesh = new T.Mesh(g, mat(p.colour)); mesh.position.set(0, -(tg.loopY + SEAT), -tg.thickness / 2); mesh.castShadow = true; body.add(mesh);
+      });
+      hook.position.set(0, tg.loopY + SEAT - cyc + 2 * RING_R, 0);  // keeps the tag itself centred in the view
+      rig.userData.h = tg.height + 24;
+      if (show) face(show);
+      fit();
+    }
+    function face(which) {                                         // spin the nearest way round to show that side
+      var want = which === 'code' ? Math.PI : 0, lean = which === 'code' ? -0.42 : 0.42, k = Math.round((yaw - want) / (2 * Math.PI));
+      target = want + lean + k * 2 * Math.PI; if (target - yaw > Math.PI) target -= 2 * Math.PI; if (yaw - target > Math.PI) target += 2 * Math.PI;
+      if (Math.abs(target - yaw) < 0.9 && state._last === which) { target += 2 * Math.PI; }   // same side again: give it a full turn so the change is seen
+      state._last = which; mark(which);
+    }
+    function mark(which) { $('showCode').setAttribute('aria-pressed', String(which === 'code')); $('showPic').setAttribute('aria-pressed', String(which !== 'code')); }
+    function current() { var a = ((yaw % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI); return a > Math.PI / 2 && a < 1.5 * Math.PI ? 'code' : 'picture'; }
+    function fit() {
+      var w = canvas.clientWidth, h = canvas.clientHeight; if (!w || !h) return;
+      renderer.setSize(w, h, false); camera.aspect = w / h;
+      var wide = matchMedia('(min-width: 901px)').matches, tanH = Math.tan(13 * Math.PI / 180);
+      var need = (rig.userData.h || 80), dist = need / 2 / tanH / Math.min(1, (w / h) * 1.35) * (wide ? 1.36 : 1.2);
+      var vh = 2 * dist * tanH, vw = vh * (w / h);
+      // on a wide stage the headline sits top-left, so the tag hangs right of centre and a little low
+      var sx = wide ? vw * 0.2 : 0, sy = wide ? vh * 0.1 : vh * 0.03;
+      camera.position.set(-sx, sy, dist); camera.lookAt(-sx, sy, 0); camera.updateProjectionMatrix();
+      key.target.position.set(0, 0, 0);
+    }
+    canvas.addEventListener('pointerdown', function (e) { dragging = true; moved = 0; lx = e.clientX; ly = e.clientY; target = null; vy = 0; canvas.setPointerCapture(e.pointerId); });
+    canvas.addEventListener('pointermove', function (e) {
+      if (!dragging) return; var dx = e.clientX - lx, dy = e.clientY - ly; lx = e.clientX; ly = e.clientY; moved += Math.abs(dx) + Math.abs(dy);
+      yaw += dx * 0.011; vy = dx * 0.011; pitch = Math.max(-0.5, Math.min(0.5, pitch + dy * 0.006)); mark(current());
+    });
+    function end() { if (!dragging) return; dragging = false; if (moved < 6) { face(current() === 'code' ? 'picture' : 'code'); } }
+    canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
+    canvas.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); face(current() === 'code' ? 'picture' : 'code'); }
+      if (e.key === 'ArrowLeft') { yaw -= 0.3; target = null; mark(current()); } if (e.key === 'ArrowRight') { yaw += 0.3; target = null; mark(current()); }
+    });
+    $('showCode').addEventListener('click', function () { state._last = null; face('code'); });
+    $('showPic').addEventListener('click', function () { state._last = null; face('picture'); });
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(canvas.parentElement); else window.addEventListener('resize', fit);
+
+    function frame(now) {
+      var t = (now - t0) / 1000;
+      if (target !== null) { var d = target - yaw; yaw += d * 0.085; if (Math.abs(d) < 0.002) { yaw = target; target = null; } }
+      else if (!dragging) { yaw += vy; vy *= 0.94; pitch += (-0.08 - pitch) * 0.03; }
+      var sway = still || dragging ? 0 : Math.sin(t * 0.7) * 0.07, bob = still ? 0 : Math.sin(t * 0.9) * 1.1;
+      hook.rotation.set(pitch * 0.4, 0, still ? 0 : Math.sin(t * 0.5) * 0.03);   // the whole thing swings from the top of the ring
+      // the ring turns in the loop, as far as the hole allows, to show the camera as much of itself as it can
+      var a = yaw + sway, want = Math.PI / 2 - a; want -= Math.PI * Math.round(want / Math.PI); want = Math.max(-SKEW, Math.min(SKEW, want));
+      ringOff += (want - ringOff) * (still ? 1 : 0.09);
+      ringTurn.rotation.y = a + ringOff;
+      tip.rotation.x = pitch * 0.6;                                            // the tag tips in the ring
+      body.rotation.y = yaw + sway;
+      rig.position.y = bob;
+      renderer.render(scene, camera);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+    return { setTag: setTag, face: face, snap: function (y, p) { yaw = y; pitch = p; target = null; vy = 0; } };
+  }
+  try { view = makeView(); } catch (e) { view = null; }
+  if (!view) $('nogl').style.display = 'flex';
+  window.__view = view;
+  refresh('picture');
+})();
+</script>
+</body>
+</html>

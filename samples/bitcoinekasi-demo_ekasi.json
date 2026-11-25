@@ -1,0 +1,61 @@
+{
+ "spec": {
+  "address": "bitcoinekasi@blink.sv",
+  "payload_mode": "uri",
+  "edition": "ekasi",
+  "shape": "round",
+  "style": "relief",
+  "colorway": "classic",
+  "module": 1.0,
+  "error": null,
+  "invert": false,
+  "thickness": 3.0,
+  "base": 2.2,
+  "relief": 0.4,
+  "rim": 1.8,
+  "rim_extra": 0.2,
+  "inlay": 0.6,
+  "back": "btc",
+  "logo": "logos/bitcoin-ekasi/bitcoin-ekasi-logo.svg",
+  "logo_mode": "color",
+  "logo_scale": 1.0,
+  "logo_bleed": true,
+  "back_top": "",
+  "back_bottom": null,
+  "back_lines": [],
+  "back_rim": false,
+  "nfc": false,
+  "tab": true,
+  "hole": 5.0,
+  "dark_comp": null,
+  "loop_wall": 3.0,
+  "loop_fillet": 3.5,
+  "name": "bitcoinekasi-demo"
+ },
+ "build": {
+  "address": "bitcoinekasi@blink.sv",
+  "payload": "lightning:bitcoinekasi@blink.sv",
+  "qr_version": 3,
+  "qr_error": "Q",
+  "modules": 29,
+  "module_mm": 1.0,
+  "size_mm": "47.0 x 55.3 x 2.8",
+  "style": "relief",
+  "colorway": "classic",
+  "filaments": {
+   "slot 1": "white",
+   "slot 2": "black",
+   "slot 3": "orange"
+  },
+  "grams": {
+   "white": 3.78,
+   "black": 1.45,
+   "orange": 0.06
+  },
+  "total_g": 5.29,
+  "layers": 14,
+  "colour_changes_per_plate": 7,
+  "qr_face": "up",
+  "notes": []
+ }
+}

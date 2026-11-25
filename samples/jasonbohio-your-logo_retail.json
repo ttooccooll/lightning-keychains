@@ -1,0 +1,58 @@
+{
+ "spec": {
+  "address": "jasonbohio@blink.sv",
+  "payload_mode": "uri",
+  "edition": "retail",
+  "shape": "round",
+  "style": "flush",
+  "colorway": "classic",
+  "module": 1.0,
+  "error": null,
+  "invert": false,
+  "thickness": 3.0,
+  "base": 2.2,
+  "relief": 0.4,
+  "rim": 1.8,
+  "rim_extra": 0.2,
+  "inlay": 0.6,
+  "back": "btc",
+  "logo": "samples/logo-test/your-logo.svg",
+  "logo_mode": "mono",
+  "logo_scale": 1.0,
+  "back_top": "",
+  "back_bottom": null,
+  "back_lines": [],
+  "back_rim": true,
+  "nfc": false,
+  "tab": true,
+  "hole": 5.0,
+  "dark_comp": null,
+  "loop_wall": 3.0,
+  "loop_fillet": 3.5,
+  "name": "jasonbohio-your-logo"
+ },
+ "build": {
+  "address": "jasonbohio@blink.sv",
+  "payload": "lightning:jasonbohio@blink.sv",
+  "qr_version": 3,
+  "qr_error": "Q",
+  "modules": 29,
+  "module_mm": 1.0,
+  "size_mm": "47.0 x 55.3 x 3.0",
+  "style": "flush",
+  "colorway": "classic",
+  "filaments": {
+   "slot 1": "white",
+   "slot 2": "black"
+  },
+  "grams": {
+   "white": 5.14,
+   "black": 1.48
+  },
+  "total_g": 6.62,
+  "layers": 15,
+  "colour_changes_per_plate": 7,
+  "qr_face": "down (on the plate)",
+  "notes": []
+ }
+}
