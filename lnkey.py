@@ -84,7 +84,7 @@ ICON_ALIASES = {
     "bbq": "grill",
     # trades & services
     "barber": "content-cut", "salon": "hair-dryer", "nails": "bottle-tonic",
-    "mechanic": "wrench", "handyman": "hammer-wrench", "carwash": "car-wash", "driver": "car-side",
+    "mechanic": "toolbox", "handyman": "hammer-wrench", "carwash": "car-wash", "driver": "car-side",
     "delivery": "moped", "bike": "bicycle", "cleaning": "broom", "lawn": "mower",
     "plumber": "pipe-wrench", "electrician": "flash", "photo": "camera", "dogwalker": "dog-side",
     "pets": "paw", "babysitter": "baby-carriage", "tutor": "school", "fitness": "dumbbell",

@@ -28,7 +28,7 @@ PICTURES = [  # (icon file, label on the site)
     ("surfing", "Surf"), ("coffee", "Coffee"), ("glass-cocktail", "Bar"), ("food-truck", "Food truck"),
     ("trombone", "Trombone"), ("trumpet", "Trumpet"), ("saxophone", "Saxophone"), ("guitar-acoustic", "Guitar"),
     ("guitar-electric", "Electric guitar"), ("violin", "Violin"), ("piano", "Piano"), ("music", "Music"),
-    ("microphone-variant", "Mic"), ("paw", "Pets"), ("wrench", "Repair"), ("camera", "Photo"),
+    ("microphone-variant", "Mic"), ("paw", "Pets"), ("toolbox", "Repair"), ("camera", "Photo"),
     ("heart", "Heart"), ("star", "Star"), ("pizza", "Pizza"), ("bicycle", "Bike"),
 ]
 
