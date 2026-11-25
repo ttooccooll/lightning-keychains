@@ -74,6 +74,7 @@ against the plastic.
 | `pill` | an orange pill |
 | `zap` | a bolt in a ring |
 | `tipjar` | a jar with a bolt on it |
+| `asic` | a mining machine, fan end on |
 | `miner` | a home miner that heats the room |
 | `surf` | a surfer |
 | `trombone`, `coffee`, `foodtruck`, `barber`, `pets`, `eggs` … | trades, shops and hobbies |

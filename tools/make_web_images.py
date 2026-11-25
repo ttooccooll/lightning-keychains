@@ -19,14 +19,16 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 import lnkey  # noqa: E402
+import shapely  # noqa: E402
 from shapely.geometry import Point  # noqa: E402
 
 PICTURES = [  # (icon file, label on the site)
     ("bitcoin-coin", "Bitcoin"), ("lightning-bolt", "Bolt"), ("sats", "Sats"), ("orange-pill", "Orange pill"),
-    ("zap-coin", "Zap"), ("tip-jar", "Tip jar"), ("home-miner", "Home miner"), ("surfing", "Surf"),
-    ("coffee", "Coffee"), ("glass-cocktail", "Bar"), ("content-cut", "Barber"), ("trombone", "Trombone"),
-    ("guitar-acoustic", "Guitar"), ("music", "Music"), ("microphone-variant", "Mic"), ("paw", "Pets"),
-    ("egg", "Eggs"), ("food-truck", "Food truck"), ("wrench", "Repair"), ("camera", "Photo"),
+    ("zap-coin", "Zap"), ("tip-jar", "Tip jar"), ("asic-miner", "ASIC miner"), ("home-miner", "Home miner"),
+    ("surfing", "Surf"), ("coffee", "Coffee"), ("glass-cocktail", "Bar"), ("food-truck", "Food truck"),
+    ("trombone", "Trombone"), ("trumpet", "Trumpet"), ("saxophone", "Saxophone"), ("guitar-acoustic", "Guitar"),
+    ("guitar-electric", "Electric guitar"), ("violin", "Violin"), ("piano", "Piano"), ("music", "Music"),
+    ("microphone-variant", "Mic"), ("paw", "Pets"), ("wrench", "Repair"), ("camera", "Photo"),
     ("heart", "Heart"), ("star", "Star"), ("pizza", "Pizza"), ("bicycle", "Bike"),
 ]
 
@@ -55,6 +57,9 @@ def pictures(out):
     data = []
     for name, label in PICTURES:
         g = lnkey.load_svg(os.path.join(lnkey.ICON_DIR, name + ".svg")).simplify(0.0025)
+        # Snap to the grid the numbers are written on, keeping the shape valid: plain rounding can
+        # fold a sliver over itself, and the site cannot triangulate a ring that crosses itself.
+        g = shapely.set_precision(g, 0.0001)
         data.append({"id": name, "label": label, "rings": rings_of(g)})
     with open(out, "w") as f:
         json.dump(data, f, separators=(",", ":"))

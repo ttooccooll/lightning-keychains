@@ -100,6 +100,19 @@ def heater():
     return unary_union([case.difference(fan).difference(vents), hub, blades.intersection(fan), feet] + waves)
 
 
+def asic_miner():
+    """A mining machine seen from the fan end: a plain metal box, one big fan, the controller on top."""
+    body = box(4.6, 3.2, 19.4, 16.8).buffer(0.6, join_style="round")
+    c = (12.0, 10.0)
+    fan = Point(*c).buffer(5.7, 64)
+    hub = Point(*c).buffer(1.5, 32)
+    blades = unary_union([affinity.rotate(box(c[0] - 0.65, c[1], c[0] + 0.65, c[1] + 5.9), a, origin=c) for a in range(0, 360, 60)])
+    screws = unary_union([Point(x, y).buffer(0.7, 24) for x in (5.7, 18.3) for y in (4.3, 15.7)])
+    top = box(7.4, 17.0, 16.6, 21.0).buffer(0.4, join_style="round")
+    ports = unary_union([box(8.7, 18.5, 10.9, 20.0), box(11.7, 18.5, 13.9, 20.0), Point(15.3, 19.25).buffer(0.55, 24)])
+    return unary_union([body.difference(fan).difference(screws), top.difference(ports), hub, blades.intersection(fan)])
+
+
 def bitcoin_coin():
     """The Bitcoin mark (public domain): a disc with the tilted B knocked out, counters and all."""
     import sys
@@ -131,6 +144,6 @@ if __name__ == "__main__":
     to_svg(trombone(), "trombone")
     to_svg(food_truck(), "food-truck")
     for name, fn in (("orange-pill", orange_pill), ("sats", sats), ("zap-coin", zap_coin), ("tip-jar", tip_jar),
-                     ("home-miner", heater), ("bitcoin-coin", bitcoin_coin)):
+                     ("home-miner", heater), ("asic-miner", asic_miner), ("bitcoin-coin", bitcoin_coin)):
         to_svg(fn(), name)
-    print("wrote trombone, food-truck, orange-pill, sats, zap-coin, tip-jar, home-miner")
+    print("wrote trombone, food-truck, orange-pill, sats, zap-coin, tip-jar, home-miner, asic-miner, bitcoin-coin")

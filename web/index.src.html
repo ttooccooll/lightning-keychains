@@ -68,9 +68,9 @@
   .state { min-height: 1.45em; margin: 8px 2px 0; font-size: 14px; }
   .state.bad { font-weight: 700; }
 
-  .tiles { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; }
+  .tiles { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; }
   .tile, .upload {
-    aspect-ratio: 1; border-radius: 14px; border: 2px solid transparent; background: var(--paper); color: var(--paper-fg);
+    aspect-ratio: 1; border-radius: 12px; border: 2px solid transparent; background: var(--paper); color: var(--paper-fg);
     display: grid; place-items: center; cursor: pointer; padding: 0; position: relative; transition: transform .12s ease;
   }
   .tile svg { width: 62%; height: 62%; display: block; }
@@ -78,7 +78,7 @@
   .tile.badge[aria-pressed="true"] { background: var(--paper); }
   .tile:hover, .upload:hover { transform: translateY(-2px); }
   .tile[aria-pressed="true"] { background: var(--fg); color: var(--stage); border-color: var(--fg); }
-  .upload { border: 2px dashed var(--fg); background: transparent; color: var(--fg); font: 700 11px/1.1 var(--ui); text-align: center; }
+  .upload { border: 2px dashed var(--fg); background: transparent; color: var(--fg); font: 700 10px/1.1 var(--ui); text-align: center; }
   .upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
   .upload[aria-pressed="true"] { background: var(--fg); color: var(--stage); border-style: solid; }
   .picked { margin: 8px 2px 0; font-size: 14px; min-height: 1.45em; }
@@ -149,6 +149,12 @@
   .tip .gifts button + button { background: transparent; color: #000; }
   .tip .gifts button span { font: 700 14px/1 var(--ui); letter-spacing: 0; white-space: nowrap; }
   .tip .gifts button[disabled] { opacity: .5; cursor: default; }
+  .tip .own { display: flex; align-items: center; gap: 8px; }
+  .tip .own input { flex: 1; min-width: 0; font: 700 16px/1.2 var(--ui); padding: 12px 14px; border-radius: 12px; border: 2px solid #000; background: #fff; color: #000; outline: none; }
+  .tip .own input::placeholder { font-weight: 500; color: rgba(0,0,0,.45); }
+  .tip .own input:focus-visible { outline: 3px solid #F7931A; outline-offset: 2px; }
+  .tip .own span { font: 700 14px/1 var(--ui); }
+  .tip .gifts .own button { width: auto; display: block; font: 700 14px/1 var(--ui); letter-spacing: 0; padding: 13px 16px; border-radius: 12px; border: 2px solid #000; background: transparent; color: #000; }
   .tip .qr { width: 220px; max-width: 70%; margin: 4px auto 12px; border: 3px solid #000; border-radius: 12px; overflow: hidden; background: #fff; }
   .tip .qr svg { display: block; width: 100%; height: auto; }
   .tip .row { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -225,7 +231,7 @@
 <dialog class="tip" id="tip" aria-labelledby="tipTitle">
   <button class="x" id="tipClose" type="button" aria-label="Close">&times;</button>
   <h2 id="tipTitle">Support this site</h2>
-  <p>Lightning Keychains is free to use. Sats sent here go to <a href="https://stacker.news/jasonb" target="_blank" rel="noopener">jasonb at stacker.news</a>, with a note that they are for this site.</p>
+  <p>Lightning Keychains is free to use. Sats sent here go to <a href="https://stacker.news/jasonb" target="_blank" rel="noopener">jasonb</a>, with a note that they are for this site.</p>
   <div class="gifts" id="tipGifts" role="group" aria-label="How much"></div>
   <div id="tipPay" hidden>
     <div class="qr" id="tipQr"></div>
@@ -527,7 +533,7 @@
   }
   function tipReset() {
     clearInterval(tipPoll); tipPoll = null;
-    $('tipPay').hidden = true; $('tipGifts').hidden = false; $('tipState').textContent = '';
+    $('tipPay').hidden = true; $('tipGifts').hidden = false; $('tipState').textContent = ''; if ($('tipSats')) $('tipSats').value = '';
     Array.prototype.forEach.call($('tipGifts').children, function (b) { b.disabled = false; });
   }
   function tipShowCode(uri, qrText, mode, copyText, message) {
@@ -567,6 +573,17 @@
     b.addEventListener('click', function () { tipAsk(gift); });
     $('tipGifts').appendChild(b);
   });
+  // ... or any amount the visitor likes
+  var own = document.createElement('form');
+  own.className = 'own'; own.noValidate = true;
+  own.innerHTML = '<input id="tipSats" type="text" inputmode="numeric" autocomplete="off" placeholder="or your own amount" aria-label="Your own amount in sats"><span>sats</span><button type="submit">Send</button>';
+  own.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var n = Number(String($('tipSats').value).replace(/[\s,._]/g, ''));
+    if (!(n >= 1 && n <= 10000000 && Math.floor(n) === n)) { $('tipState').textContent = 'Type a whole number of sats, 10,000,000 at most.'; return; }
+    tipAsk({ sats: n, thanks: 'Received. Thank you!' });
+  });
+  $('tipGifts').appendChild(own);
   $('support').addEventListener('click', function () { tipReset(); if (tip.showModal) tip.showModal(); else tip.setAttribute('open', ''); });
   $('tipClose').addEventListener('click', function () { tipReset(); if (tip.close) tip.close(); else tip.removeAttribute('open'); });
   tip.addEventListener('close', tipReset);

@@ -26,7 +26,7 @@ GROUPS = [
     ("Interests", "sunny", ["heart", "star", "smile", "peace", "cross", "church", "chess", "hiking", "tent", "tree",
                             "mountain", "fishing", "surf", "gaming", "dice", "rocket", "football", "baseball",
                             "basketball", "soccer", "golf", "bowling", "skate", "anchor"]),
-    ("Bitcoin", "bitcoin", ["btc", "bolt", "sats", "pill", "zap", "tipjar", "miner", "tips", "piggy", "giving", "key", "shield", "pickaxe", "node", "wallet"]),
+    ("Bitcoin", "bitcoin", ["btc", "bolt", "sats", "pill", "zap", "tipjar", "asic", "miner", "tips", "piggy", "giving", "key", "shield", "pickaxe", "node", "wallet"]),
 ]
 
 

@@ -107,7 +107,7 @@ ICON_ALIASES = {
     "golf": "golf", "bowling": "bowling", "skate": "skateboard", "anchor": "anchor",
     # bitcoin
     "btc": "bitcoin-coin", "bitcoin": "bitcoin-coin", "b": "bitcoin", "bolt": "lightning-bolt", "sats": "sats",
-    "pill": "orange-pill", "zap": "zap-coin", "tipjar": "tip-jar", "miner": "home-miner", "tips": "hand-coin", "piggy": "piggy-bank",
+    "pill": "orange-pill", "zap": "zap-coin", "tipjar": "tip-jar", "miner": "home-miner", "asic": "asic-miner", "s9": "asic-miner", "tips": "hand-coin", "piggy": "piggy-bank",
     "giving": "hand-heart", "key": "key-variant", "shield": "shield-check", "pickaxe": "pickaxe",
     "node": "server", "wallet": "wallet",
 }
