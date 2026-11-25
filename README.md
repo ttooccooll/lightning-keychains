@@ -122,7 +122,7 @@ Only put an organisation's logo on a tag when that organisation has asked for it
 ## The website
 
 `web/` is a one-page site. A visitor types a Lightning address, picks a picture, one of the
-slogans, their own words or their own logo, picks a colourway, turns the tag round in 3D and
+slogans, their own words, their own logo or a blank back, picks a colourway, turns the tag round in 3D and
 downloads the print file. Everything happens in the visitor's browser; nothing is uploaded and
 there is no server to run.
 
@@ -138,7 +138,8 @@ Two kinds of printer are covered:
 | Back | picture, words or logo in the accent colour | the same design pressed 0.6 mm into the plastic |
 
 On the one-filament tag, wide shapes are pressed in as a 3 mm outline, so nothing has to bridge
-further than that. Letters and thin shapes go in whole.
+further than that. Letters and thin shapes go in whole. The back starts out blank on a one-filament
+tag, which is the easiest print; the visitor can still pick a design.
 
 ```
 cd web

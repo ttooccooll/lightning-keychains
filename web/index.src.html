@@ -121,6 +121,10 @@
   .words { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .word { font: 700 13px/1 var(--ui); padding: 8px 12px; border-radius: 999px; border: 2px solid var(--fg); background: transparent; color: var(--fg); cursor: pointer; }
   .word[aria-pressed="true"] { background: var(--fg); color: var(--stage); }
+  .pick { position: relative; border-style: dashed; }
+  .pick[aria-pressed="true"] { border-style: solid; }
+  .pick input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+  .pick:focus-within { outline: 3px solid var(--focus); outline-offset: 3px; }
   .wordsin {
     width: 100%; margin-top: 8px; font: 700 15px/1.2 var(--ui); padding: 10px 14px; border-radius: 12px; border: 2px solid var(--fg);
     background: var(--paper); color: var(--paper-fg); outline: none;
@@ -264,6 +268,7 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var state = { address: OWNER_ADDRESS, image: IMAGES[0], way: WAYS[0], custom: null, words: null, typed: false, method: 'multi',
+    chosen: false,    // the visitor has picked what goes on the back
     own: false,       // the visitor has typed an address of their own
     lent: false };    // the field holds Bitcoin Ekasi's address, put there for them
   var tag = null;
@@ -277,27 +282,28 @@
     return '<svg viewBox="-52 -52 104 104" aria-hidden="true"><circle r="50" fill="#19191B"/><path fill="#FFFFFF" fill-rule="evenodd" d="' + ringsPath(b.light) +
       '"/><path fill="#F7931A" fill-rule="evenodd" d="' + ringsPath(b.accent) + '"/></svg>';
   }
-  var PICTURES = IMAGES.slice(); if (EKASI) PICTURES.splice(1, 0, EKASI);
+  var BLANK = { id: 'blank', label: 'Blank', rings: [] };       // nothing on the back: the easy print on a one-filament machine
+  var PICTURES = [BLANK].concat(IMAGES); if (EKASI) PICTURES.splice(2, 0, EKASI);
   // Bitcoin Ekasi's logo comes with Bitcoin Ekasi's address unless the visitor has typed their own.
   // Picking something else hands that borrowed address back.
   function choose(im) {
     var a = $('addr');
     if (im && im.badge && !state.own) { a.value = EKASI_ADDRESS; state.address = EKASI_ADDRESS; state.typed = true; state.lent = true; }
     else if (!(im && im.badge) && state.lent) { a.value = ''; state.address = OWNER_ADDRESS; state.typed = false; state.lent = false; }
-    state.image = im; refresh('picture');
+    state.image = im; state.chosen = true; refresh('picture');
   }
   var tiles = $('tiles');
   PICTURES.forEach(function (im) {
     var b = document.createElement('button');
     b.type = 'button'; b.className = 'tile' + (im.badge ? ' badge' : ''); b.title = im.label; b.setAttribute('aria-label', im.label); b.setAttribute('aria-pressed', 'false');
-    b.innerHTML = im.badge ? badgeSvg(im) : tileSvg(im.rings);
+    b.innerHTML = im.badge ? badgeSvg(im) : im === BLANK ? '<svg viewBox="-56 -56 112 112" aria-hidden="true"><circle r="38" fill="none" stroke="currentColor" stroke-width="7"/></svg>' : tileSvg(im.rings);
     b.addEventListener('click', function () { choose(im); });
     im.el = b; tiles.appendChild(b);
   });
   var up = document.createElement('label');
-  up.className = 'upload'; up.setAttribute('aria-pressed', 'false');
-  up.innerHTML = '<span>Your<br>logo</span><input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" aria-label="Use your own logo">';
-  tiles.appendChild(up);
+  up.className = 'word pick'; up.setAttribute('aria-pressed', 'false');
+  up.innerHTML = 'Your logo<input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" aria-label="Use your own logo">';
+  $('wordsRow').appendChild(up);
   up.querySelector('input').addEventListener('change', function (e) {
     var f = e.target.files && e.target.files[0]; if (!f) return;
     var url = URL.createObjectURL(f), img = new Image();
@@ -423,7 +429,11 @@
     var b = document.createElement('button');
     b.type = 'button'; b.className = 'seg'; b.setAttribute('aria-pressed', 'false');
     b.innerHTML = m.name + '<span>' + m.note + '</span>';
-    b.addEventListener('click', function () { state.method = m.id; refresh(m.id === 'single' ? 'code' : 'picture'); });
+    b.addEventListener('click', function () {
+      state.method = m.id;
+      if (!state.chosen) state.image = m.id === 'single' ? BLANK : IMAGES[0];    // until they pick a back themselves: plain on one filament
+      refresh(m.id === 'single' ? 'code' : 'picture');
+    });
     m.el = b; $('methods').appendChild(b);
   });
 
@@ -435,7 +445,7 @@
   });
   $('ekasi').addEventListener('click', function () {
     addr.value = EKASI_ADDRESS; state.typed = true; state.address = EKASI_ADDRESS; state.own = false; state.lent = true;
-    if (EKASI) state.image = EKASI;
+    if (EKASI) { state.image = EKASI; state.chosen = true; }
     refresh('picture');
   });
 
@@ -484,7 +494,7 @@
       $('facts').innerHTML = multi ?
         size + ' in ' + listOf(tag.parts.map(function (p) { return p.colour; })) + '. For printers that change colour themselves. It prints code-side down, and the file is written for Bambu Studio and OrcaSlicer.' :
         size + '. For any printer. It prints code-side up: start in ' + tag.swap.from + ' and swap to ' + tag.swap.to + ' at ' + tag.swap.z + ' mm, which is layer ' + tag.swap.layer +
-          ' at 0.2 mm layers. The back is pressed into the plastic.';
+          ' at 0.2 mm layers. ' + (state.image === BLANK ? 'The back is plain.' : 'The back is pressed into the plastic.');
       if (view) view.setTag(tag, show);
     }
     $('after').textContent = '';
