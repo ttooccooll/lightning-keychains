@@ -157,8 +157,9 @@ npm test           # writes test files into web/out for verify.py
 - Bitcoin Ekasi's logo is one of the pictures. Picking it fills in their address unless the
   visitor has already typed one, and picking something else takes that address out again. On a multi-colour tag only the colourways that keep the logo black, white
   and orange stay open while it is showing.
-- "Support it with sats" asks `TIP_ADDRESS` for a Lightning invoice with `TIP_NOTE` attached, so
-  the payment arrives labelled as a donation for the site. Both are set in `web/index.src.html`.
+- "Support it with sats" offers a coffee or a coffee machine (`GIFTS`) and asks `TIP_ADDRESS` for
+  a Lightning invoice with `TIP_NOTE` attached, so the payment arrives labelled as a donation
+  for the site. The address is not shown on the page. All three are set in `web/index.src.html`.
 - `python tools/make_web_images.py` rewrites `web/images.json` from the icon files, and with
   `--badge` it turns a round logo into `web/ekasi.json`.
 - `vercel.json` at the top of the repository tells Vercel to build `web/` and serve `web/dist`.

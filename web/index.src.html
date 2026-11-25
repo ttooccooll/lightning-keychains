@@ -140,17 +140,21 @@
   .tip h2 { font: 400 34px/1 var(--display); letter-spacing: .01em; margin: 0 0 10px; padding-right: 34px; }
   .tip p { margin: 0 0 14px; }
   .tip .x { position: absolute; right: 14px; top: 10px; font: 400 30px/1 var(--ui); background: none; border: 0; cursor: pointer; color: #000; padding: 4px 8px; }
-  .tip .amounts { display: flex; gap: 8px; margin-bottom: 12px; }
-  .tip .amounts button { flex: 1; font: 700 15px/1 var(--ui); padding: 12px 6px; border-radius: 12px; border: 2px solid #000; background: transparent; color: #000; cursor: pointer; }
-  .tip .amounts button[aria-pressed="true"] { background: #000; color: #F7931A; }
-  .tip .make { width: 100%; font: 400 22px/1 var(--display); letter-spacing: .03em; padding: 14px; border-radius: 14px; border: 3px solid #000; background: #000; color: #F7931A; cursor: pointer; }
-  .tip .make[disabled] { opacity: .5; cursor: default; }
+  .tip a { color: inherit; font-weight: 700; text-underline-offset: 3px; }
+  .tip .gifts { display: grid; gap: 10px; }
+  .tip .gifts button {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%; text-align: left; cursor: pointer;
+    font: 400 clamp(18px, 5.2vw, 21px)/1.05 var(--display); letter-spacing: .02em; padding: 16px 18px; border-radius: 14px; border: 3px solid #000; background: #000; color: #F7931A;
+  }
+  .tip .gifts button + button { background: transparent; color: #000; }
+  .tip .gifts button span { font: 700 14px/1 var(--ui); letter-spacing: 0; white-space: nowrap; }
+  .tip .gifts button[disabled] { opacity: .5; cursor: default; }
   .tip .qr { width: 220px; max-width: 70%; margin: 4px auto 12px; border: 3px solid #000; border-radius: 12px; overflow: hidden; background: #fff; }
   .tip .qr svg { display: block; width: 100%; height: auto; }
   .tip .row { display: flex; gap: 8px; margin-bottom: 12px; }
   .tip .row a, .tip .row button { flex: 1; text-align: center; font: 700 14px/1 var(--ui); padding: 11px 8px; border-radius: 12px; border: 2px solid #000; background: transparent; color: #000; cursor: pointer; text-decoration: none; }
   .tip .anyway { margin: 14px 0 0; text-align: center; font-size: 15px; }
-  .tip .tipstate { margin: 0; font-size: 14px; font-weight: 700; min-height: 1.45em; overflow-wrap: anywhere; }
+  .tip .tipstate { margin: 12px 0 0; font-size: 14px; font-weight: 700; min-height: 1.45em; overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -221,9 +225,8 @@
 <dialog class="tip" id="tip" aria-labelledby="tipTitle">
   <button class="x" id="tipClose" type="button" aria-label="Close">&times;</button>
   <h2 id="tipTitle">Support this site</h2>
-  <p>Lightning Keychains is free to use. Sats sent here go to <b id="tipTo"></b>, with a note that they are for this site.</p>
-  <div class="amounts" id="tipAmounts" role="group" aria-label="Amount in sats"></div>
-  <button class="make" id="tipGo" type="button">Get an invoice</button>
+  <p>Lightning Keychains is free to use. Sats sent here go to <a href="https://stacker.news/jasonb" target="_blank" rel="noopener">jasonb at stacker.news</a>, with a note that they are for this site.</p>
+  <div class="gifts" id="tipGifts" role="group" aria-label="How much"></div>
   <div id="tipPay" hidden>
     <div class="qr" id="tipQr"></div>
     <div class="row"><a id="tipOpen" href="#">Open in a wallet</a><button id="tipCopy" type="button">Copy invoice</button></div>
@@ -509,8 +512,13 @@
 
   // ---------- support ----------
   // Asks the Lightning address for an invoice with a note attached, so the payment arrives labelled.
+  // The address itself is never shown: the payer gets an invoice, or failing that a code to scan.
   var TIP_ADDRESS = 'jasonbohio@getalby.com', TIP_NOTE = 'Donation for the Lightning Keychains site';
-  var tip = $('tip'), tipSats = 5000, tipPoll = null;
+  var GIFTS = [
+    { name: 'Buy me a coffee', sats: 5000, thanks: 'Received. Thank you!' },
+    { name: 'Buy me a coffee machine', sats: 500000, thanks: 'Received. That is a lot of coffee. Thank you!' }
+  ];
+  var tip = $('tip'), tipPoll = null;
   function qrSvg(text, mode) {
     var q = qrcode(0, 'M'); q.addData(text, mode); q.make();
     var n = q.getModuleCount(), d = '';
@@ -519,18 +527,45 @@
   }
   function tipReset() {
     clearInterval(tipPoll); tipPoll = null;
-    $('tipPay').hidden = true; $('tipGo').hidden = false; $('tipGo').disabled = false; $('tipAmounts').hidden = false; $('tipState').textContent = '';
+    $('tipPay').hidden = true; $('tipGifts').hidden = false; $('tipState').textContent = '';
+    Array.prototype.forEach.call($('tipGifts').children, function (b) { b.disabled = false; });
   }
   function tipShowCode(uri, qrText, mode, copyText, message) {
-    $('tipQr').innerHTML = qrSvg(qrText, mode); $('tipOpen').href = uri; $('tipCopy').dataset.copy = copyText;
-    $('tipPay').hidden = false; $('tipGo').hidden = true; $('tipAmounts').hidden = true; $('tipState').textContent = message;
+    $('tipQr').innerHTML = qrSvg(qrText, mode); $('tipOpen').href = uri;
+    $('tipCopy').hidden = !copyText; $('tipCopy').dataset.copy = copyText || ''; $('tipCopy').textContent = 'Copy invoice';
+    $('tipPay').hidden = false; $('tipGifts').hidden = true; $('tipState').textContent = message;
   }
-  $('tipTo').textContent = TIP_ADDRESS;
-  [1000, 5000, 21000].forEach(function (n) {
+  function tipAsk(gift) {
+    var who = TIP_ADDRESS.split('@'), line = $('tipState'), amount = gift.sats.toLocaleString('en-US') + ' sats';
+    Array.prototype.forEach.call($('tipGifts').children, function (b) { b.disabled = true; });
+    line.textContent = 'Asking for an invoice…';
+    fetch('https://' + who[1] + '/.well-known/lnurlp/' + who[0]).then(function (r) { return r.json(); }).then(function (info) {
+      var msat = gift.sats * 1000;
+      if (!info.callback || msat < info.minSendable || msat > info.maxSendable) throw new Error('amount');
+      var note = TIP_NOTE.slice(0, info.commentAllowed || 0);
+      return fetch(info.callback + (info.callback.indexOf('?') < 0 ? '?' : '&') + 'amount=' + msat + (note ? '&comment=' + encodeURIComponent(note) : '')).then(function (r) { return r.json(); });
+    }).then(function (inv) {
+      if (!inv.pr) throw new Error('invoice');
+      tipShowCode('lightning:' + inv.pr, 'LIGHTNING:' + inv.pr.toUpperCase(), 'Alphanumeric', inv.pr, 'Waiting for ' + amount + '…');
+      if (inv.verify) {
+        var tries = 0;
+        tipPoll = setInterval(function () {
+          if (++tries > 120) { clearInterval(tipPoll); return; }
+          fetch(inv.verify).then(function (r) { return r.json(); }).then(function (v) {
+            if (v && v.settled) { clearInterval(tipPoll); $('tipPay').hidden = true; line.textContent = gift.thanks; }
+          }, function () {});
+        }, 3000);
+      }
+    }).catch(function () {
+      tipShowCode('lightning:' + TIP_ADDRESS, 'lightning:' + TIP_ADDRESS, 'Byte', '',
+        'Could not make an invoice from here. Scan the code to send ' + amount + ' and add the note “' + TIP_NOTE + '”.');
+    });
+  }
+  GIFTS.forEach(function (gift) {
     var b = document.createElement('button');
-    b.type = 'button'; b.textContent = n.toLocaleString('en-US') + ' sats'; b.setAttribute('aria-pressed', String(n === tipSats));
-    b.addEventListener('click', function () { tipSats = n; Array.prototype.forEach.call($('tipAmounts').children, function (x) { x.setAttribute('aria-pressed', String(x === b)); }); });
-    $('tipAmounts').appendChild(b);
+    b.type = 'button'; b.innerHTML = gift.name + '<span>' + gift.sats.toLocaleString('en-US') + ' sats</span>';
+    b.addEventListener('click', function () { tipAsk(gift); });
+    $('tipGifts').appendChild(b);
   });
   $('support').addEventListener('click', function () { tipReset(); if (tip.showModal) tip.showModal(); else tip.setAttribute('open', ''); });
   $('tipClose').addEventListener('click', function () { tipReset(); if (tip.close) tip.close(); else tip.removeAttribute('open'); });
@@ -539,31 +574,6 @@
     var b = $('tipCopy');
     try { navigator.clipboard.writeText(b.dataset.copy).then(function () { b.textContent = 'Copied'; }, function () { $('tipState').textContent = b.dataset.copy; }); }
     catch (e) { $('tipState').textContent = b.dataset.copy; }
-  });
-  $('tipGo').addEventListener('click', function () {
-    var who = TIP_ADDRESS.split('@'), line = $('tipState');
-    $('tipGo').disabled = true; line.textContent = 'Asking for an invoice…';
-    fetch('https://' + who[1] + '/.well-known/lnurlp/' + who[0]).then(function (r) { return r.json(); }).then(function (info) {
-      var msat = tipSats * 1000;
-      if (!info.callback || msat < info.minSendable || msat > info.maxSendable) throw new Error('amount');
-      var note = TIP_NOTE.slice(0, info.commentAllowed || 0);
-      return fetch(info.callback + (info.callback.indexOf('?') < 0 ? '?' : '&') + 'amount=' + msat + (note ? '&comment=' + encodeURIComponent(note) : '')).then(function (r) { return r.json(); });
-    }).then(function (inv) {
-      if (!inv.pr) throw new Error('invoice');
-      tipShowCode('lightning:' + inv.pr, 'LIGHTNING:' + inv.pr.toUpperCase(), 'Alphanumeric', inv.pr, 'Waiting for ' + tipSats.toLocaleString('en-US') + ' sats…');
-      if (inv.verify) {
-        var tries = 0;
-        tipPoll = setInterval(function () {
-          if (++tries > 120) { clearInterval(tipPoll); return; }
-          fetch(inv.verify).then(function (r) { return r.json(); }).then(function (v) {
-            if (v && v.settled) { clearInterval(tipPoll); $('tipPay').hidden = true; line.textContent = 'Received. Thank you!'; }
-          }, function () {});
-        }, 3000);
-      }
-    }).catch(function () {
-      tipShowCode('lightning:' + TIP_ADDRESS, 'lightning:' + TIP_ADDRESS, 'Byte', TIP_ADDRESS,
-        'Could not make an invoice from here. Pay ' + TIP_ADDRESS + ' and add the note “' + TIP_NOTE + '”.');
-    });
   });
 
   // ---------- the 3D view ----------
