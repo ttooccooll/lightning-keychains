@@ -197,7 +197,7 @@
 
   // ---- build ----
   function build(opts) {
-    // opts: {address, image, colors:{body, field, ink, accent}}  (colour names)
+    // opts: {address, image, colors:{body, field, ink, accent, back?}}  (colour names; back = the ground behind the picture)
     // image is {rings} - a one-colour picture, grown to fill the field - or a badge
     // {badge:true, cut, light, accent}: a round logo that takes over the whole back of the tag.
     var col = opts.colors, text = opts.payload || payload(opts.address), qr = makeQR(text), n = qr.n, m = P.module;
@@ -255,13 +255,13 @@
           put(col.field, [field].concat(darkPlate), z0, z1);
         } else {
           if (img.length) put(col.accent, img, z0, z1);
-          put(col.field, [field].concat(img), z0, z1);
+          put(col.back || col.field, [field].concat(img), z0, z1);          // the back may have a ground of its own
         }
       }
       k0 = k1;
     }
     var slots = [];
-    [col.body, col.field, col.ink, col.accent].forEach(function (c) { if (parts[c] && parts[c].prisms.length && slots.indexOf(c) < 0) slots.push(c); });
+    [col.body, col.field, col.ink, col.accent, col.back].forEach(function (c) { if (parts[c] && parts[c].prisms.length && slots.indexOf(c) < 0) slots.push(c); });
     var list = slots.map(function (c, i) { var p = parts[c]; p.slot = i + 1; p.grams = p.volume / 1000 * DENSITY; return p; });
     return {
       method: 'multi', codeUp: false, parts: list, payload: text, qr: qr, R: R, fieldR: fieldR, width: 2 * R, height: o0.top + R, thickness: P.T,

@@ -88,7 +88,8 @@
     display: inline-flex; align-items: center; gap: 9px; padding: 7px 14px 7px 8px; border-radius: 999px; cursor: pointer;
     border: 2px solid var(--fg); background: transparent; color: var(--fg); font: 700 14px/1 var(--ui);
   }
-  .swatch i { width: 26px; height: 26px; border-radius: 50%; display: block; border: 2px solid rgba(0,0,0,.55); }
+  .swatch i { width: 28px; height: 28px; border-radius: 50%; display: block; overflow: hidden; box-shadow: 0 0 0 1.5px rgba(255,255,255,.55); }
+  .swatch i svg { display: block; width: 100%; height: 100%; }
   .swatch[aria-pressed="true"] { background: var(--fg); color: var(--stage); }
 
   .go {
@@ -256,7 +257,7 @@
   var WAYS = [
     { id: 'classic',  name: 'Classic',  colors: { body: 'white',  field: 'white',  ink: 'black', accent: 'orange' }, stage: '#F7931A', fg: '#000000', echo: 'rgba(0,0,0,.085)', focus: '#FFFFFF' },
     { id: 'mono',     name: 'Ink',      colors: { body: 'white',  field: 'white',  ink: 'black', accent: 'black'  }, stage: '#2FB7AE', fg: '#000000', echo: 'rgba(0,0,0,.08)',  focus: '#FFFFFF' },
-    { id: 'midnight', name: 'Midnight', colors: { body: 'black',  field: 'white',  ink: 'black', accent: 'orange' }, stage: '#F3E7CF', fg: '#000000', echo: 'rgba(0,0,0,.07)',  focus: '#F7931A' },
+    { id: 'midnight', name: 'Midnight', colors: { body: 'black',  field: 'white',  ink: 'black', accent: 'orange', back: 'black' }, stage: '#F3E7CF', fg: '#000000', echo: 'rgba(0,0,0,.07)',  focus: '#F7931A' },
     { id: 'bitcoin',  name: 'Orange',   colors: { body: 'orange', field: 'orange', ink: 'black', accent: 'white'  }, stage: '#16233F', fg: '#FFF3DC', echo: 'rgba(255,243,220,.07)', focus: '#F7931A' },
     { id: 'sunny',    name: 'Sunny',    colors: { body: 'yellow', field: 'yellow', ink: 'black', accent: 'red'    }, stage: '#E8452C', fg: '#000000', echo: 'rgba(0,0,0,.09)',  focus: '#FFFFFF' }
   ];
@@ -391,11 +392,24 @@
   WAYS.forEach(function (w) {
     var b = document.createElement('button');
     b.type = 'button'; b.className = 'swatch'; b.setAttribute('aria-pressed', 'false');
-    var c = w.colors;
-    b.innerHTML = '<i style="background:conic-gradient(' + HEX[c.body] + ' 0 50%,' + HEX[c.ink] + ' 50% 75%,' + HEX[c.accent] + ' 75% 100%)"></i>' + w.name;
+    b.innerHTML = '<i></i>' + w.name;
     b.addEventListener('click', function () { state.way = w; refresh(state.method === 'single' ? 'code' : 'picture'); });
     w.el = b; $('swatches').appendChild(b);
   });
+  // A swatch is the tag in miniature: the rim, the ground behind the code (left), the ground
+  // behind the picture (right) and the picture's colour in the middle. A one-filament tag has
+  // only its plastic and its code colour, so schemes that come out the same there are folded up.
+  function paintSwatches(single) {
+    var seen = {};
+    WAYS.forEach(function (w) {
+      var c = w.colors, front = HEX[c.field], back = HEX[single ? c.field : (c.back || c.field)], key = c.field + '/' + c.ink;
+      w.twin = single && seen[key] ? seen[key] : null; if (single && !seen[key]) seen[key] = w;
+      w.el.hidden = !!w.twin;
+      w.el.firstChild.innerHTML = '<svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="14" fill="' + HEX[c.ink] + '"/>' +
+        '<path d="M14 3.5a10.5 10.5 0 0 0 0 21z" fill="' + front + '"/><path d="M14 3.5a10.5 10.5 0 0 1 0 21z" fill="' + back + '"/>' +
+        (single ? '' : '<circle cx="14" cy="14" r="4.6" fill="' + HEX[c.accent] + '"/>') + '</svg>';
+    });
+  }
   // Bitcoin Ekasi's logo keeps its own colours: only the colourways that print it in black,
   // white and orange stay open while it is on a multi-colour tag.
   function logoWay(w) { return w.colors.ink === 'black' && w.colors.field === 'white' && w.colors.accent === 'orange'; }
@@ -440,6 +454,7 @@
   function refresh(show) {
     var ok = LNKEY.validAddress(state.address), shown = ok ? state.address.toLowerCase() : OWNER_ADDRESS;
     var multi = state.method === 'multi', badge = !!state.image.badge, words = state.image.id === 'words';
+    paintSwatches(!multi); if (state.way.twin) state.way = state.way.twin;
     if (badge && multi && !logoWay(state.way)) state.way = WAYS[0];
     WAYS.forEach(function (w) { w.el.disabled = badge && multi && !logoWay(w); w.el.setAttribute('aria-pressed', String(state.way === w)); });
     PICTURES.forEach(function (im) { im.el.setAttribute('aria-pressed', String(state.image === im)); });
