@@ -137,7 +137,7 @@
     font: 500 16px/1.45 var(--ui);
   }
   dialog.tip::backdrop { background: rgba(0,0,0,.55); }
-  .tip h2 { font: 400 34px/1 var(--display); letter-spacing: .01em; margin: 0 0 10px; }
+  .tip h2 { font: 400 34px/1 var(--display); letter-spacing: .01em; margin: 0 0 10px; padding-right: 34px; }
   .tip p { margin: 0 0 14px; }
   .tip .x { position: absolute; right: 14px; top: 10px; font: 400 30px/1 var(--ui); background: none; border: 0; cursor: pointer; color: #000; padding: 4px 8px; }
   .tip .amounts { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -149,6 +149,7 @@
   .tip .qr svg { display: block; width: 100%; height: auto; }
   .tip .row { display: flex; gap: 8px; margin-bottom: 12px; }
   .tip .row a, .tip .row button { flex: 1; text-align: center; font: 700 14px/1 var(--ui); padding: 11px 8px; border-radius: 12px; border: 2px solid #000; background: transparent; color: #000; cursor: pointer; text-decoration: none; }
+  .tip .anyway { margin: 14px 0 0; text-align: center; font-size: 15px; }
   .tip .tipstate { margin: 0; font-size: 14px; font-weight: 700; min-height: 1.45em; overflow-wrap: anywhere; }
 </style>
 </head>
@@ -209,6 +210,14 @@
   </section>
 </div>
 
+<dialog class="tip" id="warn" aria-labelledby="warnTitle">
+  <button class="x" id="warnClose" type="button" aria-label="Close">&times;</button>
+  <h2 id="warnTitle">This tag will not pay you</h2>
+  <p>You have not typed your own Lightning address. The code on this tag pays <b id="warnWho"></b>, which belongs to <span id="warnWhose"></span>. Anyone who scans it sends their sats there.</p>
+  <button class="make" id="warnMine" type="button">Type my address</button>
+  <p class="anyway"><button class="ekasi" id="warnAnyway" type="button">Download it anyway</button></p>
+</dialog>
+
 <dialog class="tip" id="tip" aria-labelledby="tipTitle">
   <button class="x" id="tipClose" type="button" aria-label="Close">&times;</button>
   <h2 id="tipTitle">Support this site</h2>
@@ -244,7 +253,9 @@
   ];
 
   var $ = function (id) { return document.getElementById(id); };
-  var state = { address: OWNER_ADDRESS, image: IMAGES[0], way: WAYS[0], custom: null, words: null, typed: false, method: 'multi' };
+  var state = { address: OWNER_ADDRESS, image: IMAGES[0], way: WAYS[0], custom: null, words: null, typed: false, method: 'multi',
+    own: false,       // the visitor has typed an address of their own
+    lent: false };    // the field holds Bitcoin Ekasi's address, put there for them
   var tag = null;
 
   // ---------- the back: pictures ----------
@@ -257,12 +268,20 @@
       '"/><path fill="#F7931A" fill-rule="evenodd" d="' + ringsPath(b.accent) + '"/></svg>';
   }
   var PICTURES = IMAGES.slice(); if (EKASI) PICTURES.splice(1, 0, EKASI);
+  // Bitcoin Ekasi's logo comes with Bitcoin Ekasi's address unless the visitor has typed their own.
+  // Picking something else hands that borrowed address back.
+  function choose(im) {
+    var a = $('addr');
+    if (im && im.badge && !state.own) { a.value = EKASI_ADDRESS; state.address = EKASI_ADDRESS; state.typed = true; state.lent = true; }
+    else if (!(im && im.badge) && state.lent) { a.value = ''; state.address = OWNER_ADDRESS; state.typed = false; state.lent = false; }
+    state.image = im; refresh('picture');
+  }
   var tiles = $('tiles');
   PICTURES.forEach(function (im) {
     var b = document.createElement('button');
     b.type = 'button'; b.className = 'tile' + (im.badge ? ' badge' : ''); b.title = im.label; b.setAttribute('aria-label', im.label); b.setAttribute('aria-pressed', 'false');
     b.innerHTML = im.badge ? badgeSvg(im) : tileSvg(im.rings);
-    b.addEventListener('click', function () { state.image = im; refresh('picture'); });
+    b.addEventListener('click', function () { choose(im); });
     im.el = b; tiles.appendChild(b);
   });
   var up = document.createElement('label');
@@ -278,7 +297,7 @@
       URL.revokeObjectURL(url);
       var traced = null; try { traced = LNKEY.traceImage(g.getImageData(0, 0, w, h).data, w, h); } catch (err) { traced = null; }
       if (!traced) { $('picked').textContent = 'That picture came out blank. Try one with a dark shape on a plain or see-through background.'; return; }
-      state.custom = { id: 'custom', label: f.name.replace(/\.[^.]+$/, ''), rings: traced.rings }; state.image = state.custom; refresh('picture');
+      state.custom = { id: 'custom', label: f.name.replace(/\.[^.]+$/, ''), rings: traced.rings }; choose(state.custom);
     };
     img.onerror = function () { URL.revokeObjectURL(url); $('picked').textContent = 'That file would not open as a picture. PNG, JPG or SVG work.'; };
     img.src = url; e.target.value = '';
@@ -318,8 +337,8 @@
   }
   function useWords(text, typed) {
     var im = wordsImage(text); if (!im) return;
-    state.words = im; state.image = im; if (!typed) wordsInput.value = '';
-    refresh('picture');
+    state.words = im; if (!typed) wordsInput.value = '';
+    choose(im);
   }
   WORDS.forEach(function (w) {
     var b = document.createElement('button');
@@ -388,11 +407,11 @@
   // ---------- address ----------
   var addr = $('addr'), timer = null;
   addr.addEventListener('input', function () {
-    state.typed = true; clearTimeout(timer);
+    state.typed = true; state.lent = false; state.own = addr.value.trim() !== ''; clearTimeout(timer);
     timer = setTimeout(function () { state.address = addr.value.trim(); refresh('code'); }, 140);
   });
   $('ekasi').addEventListener('click', function () {
-    addr.value = EKASI_ADDRESS; state.typed = true; state.address = EKASI_ADDRESS;
+    addr.value = EKASI_ADDRESS; state.typed = true; state.address = EKASI_ADDRESS; state.own = false; state.lent = true;
     if (EKASI) state.image = EKASI;
     refresh('picture');
   });
@@ -426,7 +445,8 @@
       tag = LNKEY.build(opts);
     } catch (e) { tag = null; }
     var st = $('state');
-    if (!state.typed) { st.className = 'state'; st.textContent = 'Showing the maker’s address until you type yours.'; }
+    if (!state.typed) { st.className = 'state bad'; st.textContent = 'This is the maker’s address. Type yours so the tag pays you.'; }
+    else if (state.lent && ok) { st.className = 'state bad'; st.textContent = 'This is Bitcoin Ekasi’s address. Type yours if the tag should pay you.'; }
     else if (!state.address) { st.className = 'state'; st.textContent = 'It looks like an email address: name@wallet.com'; }
     else if (!ok) { st.className = 'state bad'; st.textContent = 'Not a Lightning address yet. It needs a name, an @ and a domain.'; }
     else if (!tag) { st.className = 'state bad'; st.textContent = 'That address is too long to fit on a tag.'; }
@@ -457,8 +477,23 @@
   }
   function baseName() { return tag.payload.replace('lightning:', '').replace(/[^a-z0-9]+/g, '-') + '-keychain'; }
   function said(text) { return function (ok) { $('after').textContent = ok ? text : 'This view cannot save files. Open the page in its own browser tab.'; }; }
-  $('go').addEventListener('click', function () {
-    if (!tag) return;
+  // A tag made without the visitor's own address pays someone else. Say so before handing it over.
+  var warn = $('warn'), wanted = null;
+  function guarded(run) {
+    return function () {
+      if (!tag) return;
+      if (state.own) { run(); return; }
+      wanted = run;
+      $('warnWho').textContent = tag.payload.replace('lightning:', '');
+      $('warnWhose').textContent = state.lent ? 'Bitcoin Ekasi' : 'the maker of this site';
+      if (warn.showModal) warn.showModal(); else warn.setAttribute('open', '');
+    };
+  }
+  function warnShut() { if (warn.close) warn.close(); else warn.removeAttribute('open'); }
+  $('warnMine').addEventListener('click', function () { warnShut(); addr.focus(); addr.select(); });
+  $('warnAnyway').addEventListener('click', function () { warnShut(); if (wanted) wanted(); wanted = null; });
+  $('warnClose').addEventListener('click', warnShut);
+  $('go').addEventListener('click', guarded(function () {
     if (tag.method === 'single') {
       save(baseName() + '.stl', LNKEY.toSTL(tag.parts), 'model/stl',
         said('Downloaded. Slice it at 0.2 mm layers and add a filament change at ' + tag.swap.z + ' mm (layer ' + tag.swap.layer + ').'));
@@ -466,12 +501,11 @@
       save(baseName() + '.3mf', LNKEY.to3mf(tag, tag.payload.replace('lightning:', '')), 'model/3mf',
         said('Downloaded. Open it in Bambu Studio or OrcaSlicer and load the filaments in the order shown.'));
     }
-  });
-  $('stl').addEventListener('click', function () {
-    if (!tag) return;
+  }));
+  $('stl').addEventListener('click', guarded(function () {
     var base = baseName(), files = tag.parts.map(function (p) { return [base + '_' + p.slot + '-' + p.colour + '.stl', LNKEY.toSTL([p])]; });
     save(base + '-stl.zip', LNKEY.zip(files), 'application/zip', said('Downloaded. Import the STL files together as one object, then give each part its colour.'));
-  });
+  }));
 
   // ---------- support ----------
   // Asks the Lightning address for an invoice with a note attached, so the payment arrives labelled.
